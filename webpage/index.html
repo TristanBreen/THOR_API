@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seizure Monitoring Dashboard</title>
+    <meta http-equiv="refresh" content="0; url=/api/data">
+    <style>
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: #faf8f3;
+            color: #2d2d2d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .loading {
+            text-align: center;
+        }
+        .loading h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .loading p {
+            font-size: 1.1rem;
+            color: #6b6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <h1>Seizure Monitoring Dashboard</h1>
+        <p>Loading dashboard...</p>
+        <p><a href="/api/data" style="color: #8b7355;">Click here if not redirected automatically</a></p>
+    </div>
+    
+    <script>
+        // Redirect to the Flask application
+        window.location.href = '/api/data';
+    </script>
+</body>
+</html>
