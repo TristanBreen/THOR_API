@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Seizure Monitoring Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
@@ -10,52 +10,53 @@
         body { font-family: 'Georgia', 'Garamond', serif; background: linear-gradient(135deg, #1a4d2e 0%, #2d5a3d 50%, #3d6b4f 100%); min-height: 100vh; padding: 20px; color: #2d3e35; }
         .container { max-width: 1600px; margin: 0 auto; }
         .header { background: linear-gradient(135deg, #8b9a7c 0%, #a0b896 100%); padding: 50px 40px; border-radius: 16px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); margin-bottom: 20px; text-align: center; border: 3px solid #d4c5a9; }
-        .header h1 { font-size: 48px; color: #1a4d2e; margin-bottom: 8px; font-weight: 700; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.3); }
+        .header h1 { font-size: 48px; color: #1a4d2e; margin-bottom: 8px; font-weight: 700; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(255,255,255,0.3); }
         .header p { color: #3d5a47; font-size: 18px; font-style: italic; margin-bottom: 5px; }
         .last-updated { font-size: 13px; color: #4d6d5a; margin-top: 10px; }
-        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%); padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); border-left: 5px solid #2d5a3d; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2); }
-        .stat-label { color: #5a6d62; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; }
-        .stat-value { font-size: 36px; font-weight: bold; color: #1a4d2e; margin-bottom: 8px; }
-        .stat-subtitle { color: #6d7d75; font-size: 14px; }
-        .chart-container { background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); margin-bottom: 30px; border-top: 4px solid #2d5a3d; }
-        .chart-title { font-size: 20px; font-weight: 700; color: #1a4d2e; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #c4b5a0; font-family: 'Georgia', serif; }
-        .chart-wrapper { position: relative; height: 300px; margin-bottom: 20px; }
-        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-        .insights-section { background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); margin-bottom: 30px; border-top: 4px solid #2d5a3d; }
-        .insights-title { font-size: 20px; font-weight: 700; color: #1a4d2e; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #c4b5a0; }
-        .insight-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #d4c5a9; }
-        .insight-item:last-child { border-bottom: none; }
-        .insight-icon { width: 40px; height: 40px; border-radius: 50%; background: #2d5a3d; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 15px; flex-shrink: 0; }
-        .insight-content h3 { color: #1a4d2e; font-size: 15px; margin-bottom: 5px; font-weight: 700; }
-        .insight-content p { color: #6d7d75; font-size: 14px; }
-        .data-table { overflow-x: auto; background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); margin-bottom: 30px; border-top: 4px solid #2d5a3d; }
-        .data-table-title { font-size: 20px; font-weight: 700; color: #1a4d2e; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #c4b5a0; }
-        table { width: 100%; border-collapse: collapse; }
-        thead { background: #2d5a3d; }
-        th { padding: 14px; text-align: left; font-weight: 700; color: #f5f1e8; font-size: 13px; text-transform: uppercase; border-bottom: 2px solid #1a4d2e; letter-spacing: 0.5px; }
-        td { padding: 12px 14px; border-bottom: 1px solid #d4c5a9; color: #2d3e35; font-size: 14px; }
-        tr:hover { background: #e8dfd2; }
-        .food-yes { background: #4a7c59; color: #f5f1e8; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .food-no { background: #8b7355; color: #f5f1e8; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .period-yes { background: #c1566c; color: #f5f1e8; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .period-no { background: #7a9d8e; color: #f5f1e8; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-        .loading { text-align: center; color: #6d7d75; padding: 40px; }
-        .error { background: #a06858; color: #f5f1e8; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
-        .stat-card.alert { border-left-color: #c1566c; background: linear-gradient(135deg, #faf6f1 0%, #f5ede4 100%); }
-        .stat-value.alert { color: #c1566c; }
-        .btn { background: linear-gradient(135deg, #2d5a3d 0%, #1a4d2e 100%); color: #f5f1e8; padding: 12px 24px; border: 2px solid #1a4d2e; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block; font-family: 'Georgia', serif; }
-        .btn:hover { background: linear-gradient(135deg, #1a4d2e 0%, #0d3620 100%); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .header-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:30px; }
+        .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:30px; }
+        .stat-card { background: linear-gradient(135deg,#f5f1e8 0%,#ece5d7 100%); padding:25px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); border-left:5px solid #2d5a3d; transition: transform .3s, box-shadow .3s; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow:0 6px 16px rgba(0,0,0,0.2); }
+        .stat-label { color:#5a6d62; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:10px; letter-spacing:1px; }
+        .stat-value { font-size:36px; font-weight:bold; color:#1a4d2e; margin-bottom:8px; }
+        .stat-subtitle { color:#6d7d75; font-size:14px; }
+        .chart-container { background: linear-gradient(135deg,#f5f1e8 0%,#ece5d7 100%); padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-bottom:30px; border-top:4px solid #2d5a3d; }
+        .chart-title { font-size:20px; font-weight:700; color:#1a4d2e; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #c4b5a0; font-family: 'Georgia', serif; }
+        .chart-wrapper { position:relative; height:300px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; padding:6px 0; }
+        .chart-wrapper--left { justify-content:flex-start; }
+        .two-column { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:30px; }
+        .insights-section { background: linear-gradient(135deg,#f5f1e8 0%,#ece5d7 100%); padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-bottom:30px; border-top:4px solid #2d5a3d; }
+        .insights-title { font-size:20px; font-weight:700; color:#1a4d2e; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #c4b5a0; }
+        .insight-item { display:flex; align-items:center; padding:15px 0; border-bottom:1px solid #d4c5a9; }
+        .insight-item:last-child { border-bottom:none; }
+        .insight-icon { width:40px; height:40px; border-radius:50%; background:#2d5a3d; display:flex; align-items:center; justify-content:center; font-size:20px; margin-right:15px; flex-shrink:0; color:#f5f1e8; }
+        .insight-content h3 { color:#1a4d2e; font-size:15px; margin-bottom:5px; font-weight:700; }
+        .insight-content p { color:#6d7d75; font-size:14px; }
+        .data-table { overflow-x:auto; background: linear-gradient(135deg,#f5f1e8 0%,#ece5d7 100%); padding:30px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); margin-bottom:30px; border-top:4px solid #2d5a3d; }
+        .data-table-title { font-size:20px; font-weight:700; color:#1a4d2e; margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #c4b5a0; }
+        table { width:100%; border-collapse:collapse; }
+        thead { background:#2d5a3d; }
+        th { padding:14px; text-align:left; font-weight:700; color:#f5f1e8; font-size:13px; text-transform:uppercase; border-bottom:2px solid #1a4d2e; letter-spacing:0.5px; }
+        td { padding:12px 14px; border-bottom:1px solid #d4c5a9; color:#2d3e35; font-size:14px; }
+        tr:hover { background:#e8dfd2; }
+        .food-yes { background:#4a7c59; color:#f5f1e8; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:600; }
+        .food-no { background:#8b7355; color:#f5f1e8; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:600; }
+        .period-yes { background:#c1566c; color:#f5f1e8; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:600; }
+        .period-no { background:#7a9d8e; color:#f5f1e8; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:600; }
+        .loading { text-align:center; color:#6d7d75; padding:40px; }
+        .error { background:#a06858; color:#f5f1e8; padding:20px; border-radius:12px; margin-bottom:30px; }
+        .stat-card.alert { border-left-color:#c1566c; background: linear-gradient(135deg,#faf6f1 0%,#f5ede4 100%); }
+        .stat-value.alert { color:#c1566c; }
+        .btn { background: linear-gradient(135deg,#2d5a3d 0%,#1a4d2e 100%); color:#f5f1e8; padding:12px 24px; border:2px solid #1a4d2e; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all .3s; text-decoration:none; display:inline-block; font-family:'Georgia', serif; }
+        .btn:hover { background: linear-gradient(135deg,#1a4d2e 0%,#0d3620 100%); transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
         .btn:active { transform: translateY(0); }
-        .table-controls { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
-        .filter-group { display: flex; gap: 10px; align-items: center; }
-        .filter-group label { font-weight: 600; color: #1a4d2e; font-size: 13px; }
-        .filter-group select, .filter-group input { padding: 8px 12px; border: 2px solid #d4c5a9; border-radius: 6px; font-family: 'Georgia', serif; color: #1a4d2e; background: #f5f1e8; }
-        .filter-group select:focus, .filter-group input:focus { outline: none; border-color: #2d5a3d; box-shadow: 0 0 0 3px rgba(45, 90, 61, 0.1); }
-        @media (max-width: 1200px) { .two-column { grid-template-columns: 1fr; } .header h1 { font-size: 36px; } }
-        @media (max-width: 768px) { .header { padding: 30px 20px; } .header h1 { font-size: 28px; } .grid { grid-template-columns: 1fr; } .table-controls { flex-direction: column; align-items: stretch; } .filter-group { flex-direction: column; align-items: stretch; } .filter-group select, .filter-group input { width: 100%; } }
+        .table-controls { display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+        .filter-group { display:flex; gap:10px; align-items:center; }
+        .filter-group label { font-weight:600; color:#1a4d2e; font-size:13px; }
+        .filter-group select, .filter-group input { padding:8px 12px; border:2px solid #d4c5a9; border-radius:6px; font-family:'Georgia', serif; color:#1a4d2e; background:#f5f1e8; }
+        .filter-group select:focus, .filter-group input:focus { outline:none; border-color:#2d5a3d; box-shadow:0 0 0 3px rgba(45,90,61,0.1); }
+        @media (max-width:1200px) { .two-column { grid-template-columns:1fr; } .header h1 { font-size:36px; } }
+        @media (max-width:768px) { .header { padding:30px 20px; } .header h1 { font-size:28px; } .grid { grid-template-columns:1fr; } .table-controls { flex-direction:column; align-items:stretch; } .filter-group { flex-direction:column; align-items:stretch; } .filter-group select, .filter-group input { width:100%; } }
     </style>
 </head>
 <body>
@@ -82,8 +83,9 @@
         <div class="two-column">
             <div class="chart-container">
                 <div class="chart-title">Seizure Risk Heatmap (Hour x Day of Week)</div>
-                <div id="heatmapContainer" style="display: flex; justify-content: center; padding: 10px 0;">
-                    <canvas id="heatmapCanvas" style="max-width: 100%; height: auto;"></canvas>
+                <div class="chart-wrapper" id="heatmapWrapper">
+                    <!-- canvas will be centered inside wrapper; sizing handled in JS for crispness -->
+                    <canvas id="heatmapCanvas" style="display:block; margin:0 auto; max-width:100%; height:100%;"></canvas>
                 </div>
             </div>
             <div class="chart-container">
@@ -215,8 +217,7 @@
             
             let mostCommonHour = 12, maxCount = 0;
             charts.hour_frequency.forEach(item => { if (item.count > maxCount) { maxCount = item.count; mostCommonHour = item.hour; } });
-            const period = mostCommonHour >= 12 ? 'PM' : 'AM';
-            const displayHour = mostCommonHour % 12 === 0 ? 12 : mostCommonHour % 12;
+            const displayHour = String(mostCommonHour).padStart(2, '0');
             
             let mostCommonDay = 'Monday';
             maxCount = 0;
@@ -224,84 +225,157 @@
 
             section.innerHTML = `
                 <div class="insights-title">Key Insights</div>
-                <div class="insight-item"><div class="insight-icon">⏰</div><div class="insight-content"><h3>Peak Time</h3><p>${displayHour}:00 ${period}</p></div></div>
+                <div class="insight-item"><div class="insight-icon">⏰</div><div class="insight-content"><h3>Peak Time</h3><p>${displayHour}:00 (24h)</p></div></div>
                 <div class="insight-item"><div class="insight-icon">📆</div><div class="insight-content"><h3>Weekly Peak</h3><p>${mostCommonDay}</p></div></div>
                 <div class="insight-item"><div class="insight-icon">📊</div><div class="insight-content"><h3>Data Summary</h3><p>${stats.date_range_days} days tracked, ${stats.total_seizures} seizures</p></div></div>
             `;
         }
 
+        // Horizontal heatmap: hours across X (military 00-23), days down Y
         function createHeatmap(heatmapData) {
             const canvas = document.getElementById('heatmapCanvas');
             const ctx = canvas.getContext('2d');
-            const hours = 24, days = 7, cellSize = 30, labelWidth = 50, labelHeight = 25, padding = 10;
-            canvas.width = labelWidth + (days * cellSize) + (padding * 2);
-            canvas.height = labelHeight + (hours * cellSize) + (padding * 2);
-            const maxCount = Math.max(...heatmapData.map(d => d.count), 1);
+
+            const hours = 24;
+            const days = 7;
+            const cellSize = 30;            // pixel size per cell (logical)
+            const labelLeftWidth = 62;     // width reserved for day labels (reducing pushes graph left)
+            const labelTopHeight = 28;     // height reserved for hour labels
+            const padding = 8;
+
+            // logical pixel dimensions (will be scaled by DPR)
+            const pixelWidth = labelLeftWidth + (hours * cellSize) + (padding * 2);
+            const pixelHeight = labelTopHeight + (days * cellSize) + (padding * 2);
+
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.round(pixelWidth * dpr);
+            canvas.height = Math.round(pixelHeight * dpr);
+
+            // Make canvas responsive but keep aspect: do not force width:100% which was pushing content to the right.
+            canvas.style.width = 'auto';
+            canvas.style.height = '100%';
+            canvas.style.maxWidth = '100%';
+            canvas.style.display = 'block';
+            canvas.style.margin = '0 auto';
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Clear
+            ctx.clearRect(0, 0, pixelWidth, pixelHeight);
+
+            // color scaling
+            const maxCount = Math.max(...(heatmapData.map(d => d.count)), 1);
             const getColor = (count) => {
-                if (count === 0) return '#ece5d7';
+                if (!count) return '#ece5d7';
                 const intensity = count / maxCount;
                 if (intensity < 0.33) return '#c8d9c8';
                 if (intensity < 0.66) return '#6fa86f';
                 return '#2d5a3d';
             };
-            const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+            // Draw hour labels (00 .. 23) across the top
             ctx.font = '12px Georgia';
-            ctx.textAlign = 'center';
             ctx.fillStyle = '#1a4d2e';
-            for (let i = 0; i < days; i++) {
-                ctx.fillText(dayLabels[i], labelWidth + (i * cellSize) + (cellSize / 2), padding + (labelHeight / 2));
-            }
-            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'center';
             for (let hour = 0; hour < hours; hour++) {
-                const p = hour >= 12 ? 'PM' : 'AM';
-                const h = hour % 12 === 0 ? 12 : hour % 12;
-                ctx.fillText(`${h} ${p}`, labelWidth - 10, labelHeight + padding + (hour * cellSize) + (cellSize / 2));
+                const label = String(hour).padStart(2, '0');
+                const x = labelLeftWidth + padding + (hour * cellSize) + (cellSize / 2);
+                const y = padding + (labelTopHeight / 2);
+                ctx.fillText(label, x, y);
             }
+
+            // Day labels on the left, right-aligned
+            const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+            ctx.textAlign = 'right';
+            for (let d = 0; d < days; d++) {
+                const x = labelLeftWidth - 8;
+                const y = padding + labelTopHeight + (d * cellSize) + (cellSize / 2);
+                ctx.fillText(dayLabels[d], x, y);
+            }
+
+            // Draw cells
             heatmapData.forEach(cell => {
-                const x = labelWidth + padding + (cell.day_index * cellSize);
-                const y = labelHeight + padding + (cell.hour * cellSize);
-                const color = getColor(cell.count);
-                ctx.fillStyle = color;
+                // Expect cell to have: hour (0-23), day_index (0-6), count
+                const x = labelLeftWidth + padding + (cell.hour * cellSize);
+                const y = labelTopHeight + padding + (cell.day_index * cellSize);
+                ctx.fillStyle = getColor(cell.count);
                 ctx.fillRect(x, y, cellSize, cellSize);
+
+                // cell border
                 ctx.strokeStyle = '#d4c5a9';
                 ctx.lineWidth = 1;
-                ctx.strokeRect(x, y, cellSize, cellSize);
-                if (cell.count > 0) {
+                ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
+
+                // count label (small)
+                if (cell.count && cell.count > 0) {
                     ctx.fillStyle = cell.count > maxCount * 0.5 ? '#f5f1e8' : '#1a4d2e';
-                    ctx.font = 'bold 14px Arial';
+                    ctx.font = '12px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(cell.count, x + (cellSize / 2), y + (cellSize / 2));
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(String(cell.count), x + (cellSize / 2), y + (cellSize / 2));
                 }
             });
         }
 
         function renderCharts(chartsData) {
+            // Monthly
             const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
             if (charts.monthly) charts.monthly.destroy();
-            charts.monthly = new Chart(monthlyCtx, { type: 'line', data: { labels: chartsData.monthly_frequency.map(m => m.month), datasets: [{ label: 'Seizures', data: chartsData.monthly_frequency.map(m => m.count), borderColor: '#2d5a3d', backgroundColor: 'rgba(45, 90, 61, 0.15)', tension: 0.4, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+            charts.monthly = new Chart(monthlyCtx, {
+                type: 'line',
+                data: { labels: chartsData.monthly_frequency.map(m => m.month), datasets: [{ label: 'Seizures', data: chartsData.monthly_frequency.map(m => m.count), borderColor: '#2d5a3d', backgroundColor: 'rgba(45,90,61,0.15)', tension: 0.4, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            });
 
+            // Duration
             const durationCtx = document.getElementById('durationChart').getContext('2d');
             if (charts.duration) charts.duration.destroy();
-            charts.duration = new Chart(durationCtx, { type: 'bar', data: { labels: chartsData.duration_distribution.map(d => d.range), datasets: [{ label: 'Count', data: chartsData.duration_distribution.map(d => d.count), backgroundColor: '#4a7c59' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+            charts.duration = new Chart(durationCtx, {
+                type: 'bar',
+                data: { labels: chartsData.duration_distribution.map(d => d.range), datasets: [{ label: 'Count', data: chartsData.duration_distribution.map(d => d.count), backgroundColor: '#4a7c59' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            });
 
+            // Time between seizures
             const timeIntervalCtx = document.getElementById('timeIntervalChart').getContext('2d');
             if (charts.timeInterval) charts.timeInterval.destroy();
-            charts.timeInterval = new Chart(timeIntervalCtx, { type: 'line', data: { labels: chartsData.time_between_seizures.map((_, i) => `Interval ${i + 1}`), datasets: [{ label: 'Days', data: chartsData.time_between_seizures.map(t => t.days_since_previous), borderColor: '#c1566c', backgroundColor: 'rgba(193, 86, 108, 0.1)', tension: 0.4, fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { color: 'rgba(45, 90, 61, 0.05)' } } } } });
+            charts.timeInterval = new Chart(timeIntervalCtx, {
+                type: 'line',
+                data: { labels: chartsData.time_between_seizures.map((_, i) => `Interval ${i + 1}`), datasets: [{ label: 'Days', data: chartsData.time_between_seizures.map(t => t.days_since_previous), borderColor: '#c1566c', backgroundColor: 'rgba(193,86,108,0.1)', tension: 0.4, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { color: 'rgba(45,90,61,0.05)' } } } }
+            });
 
+            // Heatmap (horizontal - hours across, days down)
             createHeatmap(chartsData.heatmap);
 
+            // Hour of day
             const hourCtx = document.getElementById('hourChart').getContext('2d');
             if (charts.hour) charts.hour.destroy();
-            const hourLabels = chartsData.hour_frequency.map(h => { const p = h.hour >= 12 ? 'PM' : 'AM'; const hh = h.hour % 12 === 0 ? 12 : h.hour % 12; return `${hh} ${p}`; });
-            charts.hour = new Chart(hourCtx, { type: 'bar', data: { labels: hourLabels, datasets: [{ label: 'Seizures', data: chartsData.hour_frequency.map(h => h.count), backgroundColor: '#2d5a3d' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+            const hourLabels = chartsData.hour_frequency.map(h => String(h.hour).padStart(2, '0'));
+            charts.hour = new Chart(hourCtx, {
+                type: 'bar',
+                data: { labels: hourLabels, datasets: [{ label: 'Seizures', data: chartsData.hour_frequency.map(h => h.count), backgroundColor: '#2d5a3d' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            });
 
+            // Day of week
             const dayCtx = document.getElementById('dayChart').getContext('2d');
             if (charts.day) charts.day.destroy();
-            charts.day = new Chart(dayCtx, { type: 'bar', data: { labels: chartsData.day_frequency.map(d => d.day), datasets: [{ label: 'Seizures', data: chartsData.day_frequency.map(d => d.count), backgroundColor: '#4a7c59' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+            charts.day = new Chart(dayCtx, {
+                type: 'bar',
+                data: { labels: chartsData.day_frequency.map(d => d.day), datasets: [{ label: 'Seizures', data: chartsData.day_frequency.map(d => d.count), backgroundColor: '#4a7c59' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            });
 
+            // Food vs duration
             const foodCtx = document.getElementById('foodChart').getContext('2d');
             if (charts.food) charts.food.destroy();
-            charts.food = new Chart(foodCtx, { type: 'bar', data: { labels: ['With Food', 'Without Food'], datasets: [{ label: 'Avg Duration', data: [chartsData.food_analysis.food_eaten_avg, chartsData.food_analysis.no_food_avg], backgroundColor: ['#4a7c59', '#8b7355'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } });
+            charts.food = new Chart(foodCtx, {
+                type: 'bar',
+                data: { labels: ['With Food','Without Food'], datasets: [{ label: 'Avg Duration', data: [chartsData.food_analysis.food_eaten_avg, chartsData.food_analysis.no_food_avg], backgroundColor: ['#4a7c59','#8b7355'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            });
         }
 
         function renderTable(timeline) {
@@ -321,7 +395,7 @@
             if (foodFilter !== 'all') filtered = filtered.filter(r => r.food_eaten === (foodFilter === 'yes'));
             if (dateFilter) filtered = filtered.filter(r => r.timestamp.split(' ')[0] >= dateFilter);
             if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="6">No records</td></tr>'; return; }
-            tbody.innerHTML = filtered.slice(0, 50).map(record => `<tr><td>${record.timestamp}</td><td>${record.duration_seconds}s</td><td>${record.hour_of_day}:00</td><td>${record.day_of_week}</td><td><span class="${record.period ? 'period-yes' : 'period-no'}">${record.period ? 'Yes' : 'No'}</span></td><td><span class="${record.food_eaten ? 'food-yes' : 'food-no'}">${record.food_eaten ? 'Yes' : 'No'}</span></td></tr>`).join('');
+            tbody.innerHTML = filtered.slice(0, 50).map(record => `<tr><td>${record.timestamp}</td><td>${record.duration_seconds}s</td><td>${String(record.hour_of_day).padStart(2,'0')}:00</td><td>${record.day_of_week}</td><td><span class="${record.period ? 'period-yes' : 'period-no'}">${record.period ? 'Yes' : 'No'}</span></td><td><span class="${record.food_eaten ? 'food-yes' : 'food-no'}">${record.food_eaten ? 'Yes' : 'No'}</span></td></tr>`).join('');
         }
 
         function initializeFilterListeners() {
