@@ -28,8 +28,11 @@ def load_seizure_data():
         # Extract whether food was eaten
         df['food_eaten'] = df['Eaten'].astype(str).str.lower() == 'true'
         
+        # Extract period data - True if 'Peiod' column is True (note: typo in CSV)
+        df['period'] = df['Peiod'].astype(str).str.lower() == 'true'
+        
         # Select only the columns we need
-        df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten']]
+        df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten', 'period']]
         
         # Remove rows with invalid timestamps
         df = df.dropna(subset=['timestamp'])
@@ -68,6 +71,14 @@ def calculate_statistics(df):
     food_eaten_count = df[df['food_eaten'] == True].shape[0]
     no_food_count = df[df['food_eaten'] == False].shape[0]
     
+    # Period correlation
+    period_count = df[df['period'] == True].shape[0]
+    non_period_count = df[df['period'] == False].shape[0]
+    
+    # Average duration during period vs outside period
+    period_avg_duration = df[df['period'] == True]['duration_seconds'].mean() if period_count > 0 else 0
+    non_period_avg_duration = df[df['period'] == False]['duration_seconds'].mean() if non_period_count > 0 else 0
+    
     # Recent activity (last 7 days)
     last_7_days = df[df['timestamp'] >= datetime.now() - timedelta(days=7)]
     recent_seizures = len(last_7_days)
@@ -82,6 +93,10 @@ def calculate_statistics(df):
         'max_duration': int(max_duration),
         'food_eaten_count': food_eaten_count,
         'no_food_count': no_food_count,
+        'period_related_count': period_count,
+        'non_period_count': non_period_count,
+        'period_avg_duration': round(period_avg_duration, 1),
+        'non_period_avg_duration': round(non_period_avg_duration, 1),
         'recent_seizures_7_days': recent_seizures,
         'first_record': df_sorted['timestamp'].min().strftime('%Y-%m-%d'),
         'last_record': df_sorted['timestamp'].max().strftime('%Y-%m-%d')
@@ -110,6 +125,61 @@ def prepare_chart_data(df):
     day_freq = df['day_of_week'].value_counts().reindex(day_order, fill_value=0).reset_index()
     day_freq.columns = ['day', 'count']
     
+    # Monthly seizure frequency
+    df['month'] = df['timestamp'].dt.to_period('M').astype(str)
+    monthly_freq = df.groupby('month').size().reset_index()
+    monthly_freq.columns = ['month', 'count']
+    
+    # Hour × Day of Week Heatmap
+    heatmap_data = df.groupby(['hour_of_day', 'day_of_week']).size().reset_index(name='count')
+    # Reindex to include all hours and days
+    heatmap_pivot = pd.DataFrame(0, 
+                                  index=range(24), 
+                                  columns=day_order)
+    for _, row in heatmap_data.iterrows():
+        heatmap_pivot.loc[row['hour_of_day'], row['day_of_week']] = row['count']
+    
+    heatmap_formatted = []
+    for hour in range(24):
+        for day in day_order:
+            count = int(heatmap_pivot.loc[hour, day])
+            heatmap_formatted.append({
+                'hour': hour,
+                'day': day,
+                'count': count,
+                'day_index': day_order.index(day)
+            })
+    
+    # Duration Distribution - bucketed by ranges
+    duration_buckets = {
+        '45-75s': len(df[(df['duration_seconds'] >= 45) & (df['duration_seconds'] < 75)]),
+        '75-100s': len(df[(df['duration_seconds'] >= 75) & (df['duration_seconds'] < 100)]),
+        '100-125s': len(df[(df['duration_seconds'] >= 100) & (df['duration_seconds'] < 125)]),
+        '125-150s': len(df[(df['duration_seconds'] >= 125) & (df['duration_seconds'] < 150)]),
+        '150-200s': len(df[(df['duration_seconds'] >= 150) & (df['duration_seconds'] < 200)]),
+        '200+s': len(df[df['duration_seconds'] >= 200])
+    }
+    duration_distribution = [{'range': k, 'count': v} for k, v in duration_buckets.items()]
+    
+    # Time Between Seizures (intervals in days)
+    df_sorted = df.sort_values('timestamp', ascending=True)
+    df_sorted['date_only'] = df_sorted['timestamp'].dt.date
+    seizure_dates = df_sorted['date_only'].unique()
+    
+    intervals = []
+    for i in range(1, len(seizure_dates)):
+        interval_days = (seizure_dates[i] - seizure_dates[i-1]).days
+        intervals.append(interval_days)
+    
+    # Create time between seizures data for chart
+    time_between = []
+    for i, interval in enumerate(intervals):
+        time_between.append({
+            'seizure_number': i + 2,  # Start from 2nd seizure
+            'days_since_previous': interval,
+            'date': seizure_dates[i+1].strftime('%Y-%m-%d') if i+1 < len(seizure_dates) else ''
+        })
+    
     # Duration statistics
     duration_stats = {
         'mean': round(df['duration_seconds'].mean(), 1),
@@ -131,14 +201,19 @@ def prepare_chart_data(df):
     }
     
     # Time series data (most recent first for display)
-    timeline_data = df.sort_values('timestamp', ascending=False)[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten']].copy()
+    timeline_data = df.sort_values('timestamp', ascending=False)[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten', 'period']].copy()
     timeline_data['timestamp'] = timeline_data['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     timeline_data['food_eaten'] = timeline_data['food_eaten'].astype(bool)
+    timeline_data['period'] = timeline_data['period'].astype(bool)
     
     return {
         'daily_frequency': daily_freq.to_dict('records'),
         'hour_frequency': hour_freq.to_dict('records'),
         'day_frequency': day_freq.to_dict('records'),
+        'monthly_frequency': monthly_freq.to_dict('records'),
+        'heatmap': heatmap_formatted,
+        'duration_distribution': duration_distribution,
+        'time_between_seizures': time_between,
         'duration_stats': duration_stats,
         'food_analysis': food_analysis,
         'timeline': timeline_data.to_dict('records')
@@ -159,6 +234,31 @@ def get_data():
         'charts': charts,
         'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     })
+
+@app.route('/api/export')
+def export_data():
+    """Export seizure data as CSV"""
+    try:
+        df = load_seizure_data()
+        if df.empty:
+            return jsonify({'error': 'No data to export'}), 400
+        
+        # Sort chronologically for export
+        df = df.sort_values('timestamp', ascending=True)
+        
+        # Format the dataframe for export
+        export_df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten', 'period']].copy()
+        export_df.columns = ['DateTime', 'Duration (seconds)', 'Hour of Day', 'Day of Week', 'Food Eaten', 'During Period']
+        
+        # Convert to CSV string
+        csv_string = export_df.to_csv(index=False)
+        
+        return csv_string, 200, {
+            'Content-Disposition': 'attachment; filename="kylie_seizure_data.csv"',
+            'Content-Type': 'text/csv'
+        }
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
