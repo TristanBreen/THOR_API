@@ -235,5 +235,30 @@ def get_data():
         'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     })
 
+@app.route('/api/export')
+def export_data():
+    """Export seizure data as CSV"""
+    try:
+        df = load_seizure_data()
+        if df.empty:
+            return jsonify({'error': 'No data to export'}), 400
+        
+        # Sort chronologically for export
+        df = df.sort_values('timestamp', ascending=True)
+        
+        # Format the dataframe for export
+        export_df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten', 'period']].copy()
+        export_df.columns = ['DateTime', 'Duration (seconds)', 'Hour of Day', 'Day of Week', 'Food Eaten', 'During Period']
+        
+        # Convert to CSV string
+        csv_string = export_df.to_csv(index=False)
+        
+        return csv_string, 200, {
+            'Content-Disposition': 'attachment; filename="kylie_seizure_data.csv"',
+            'Content-Type': 'text/csv'
+        }
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
