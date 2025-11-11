@@ -125,6 +125,61 @@ def prepare_chart_data(df):
     day_freq = df['day_of_week'].value_counts().reindex(day_order, fill_value=0).reset_index()
     day_freq.columns = ['day', 'count']
     
+    # Monthly seizure frequency
+    df['month'] = df['timestamp'].dt.to_period('M').astype(str)
+    monthly_freq = df.groupby('month').size().reset_index()
+    monthly_freq.columns = ['month', 'count']
+    
+    # Hour × Day of Week Heatmap
+    heatmap_data = df.groupby(['hour_of_day', 'day_of_week']).size().reset_index(name='count')
+    # Reindex to include all hours and days
+    heatmap_pivot = pd.DataFrame(0, 
+                                  index=range(24), 
+                                  columns=day_order)
+    for _, row in heatmap_data.iterrows():
+        heatmap_pivot.loc[row['hour_of_day'], row['day_of_week']] = row['count']
+    
+    heatmap_formatted = []
+    for hour in range(24):
+        for day in day_order:
+            count = int(heatmap_pivot.loc[hour, day])
+            heatmap_formatted.append({
+                'hour': hour,
+                'day': day,
+                'count': count,
+                'day_index': day_order.index(day)
+            })
+    
+    # Duration Distribution - bucketed by ranges
+    duration_buckets = {
+        '45-75s': len(df[(df['duration_seconds'] >= 45) & (df['duration_seconds'] < 75)]),
+        '75-100s': len(df[(df['duration_seconds'] >= 75) & (df['duration_seconds'] < 100)]),
+        '100-125s': len(df[(df['duration_seconds'] >= 100) & (df['duration_seconds'] < 125)]),
+        '125-150s': len(df[(df['duration_seconds'] >= 125) & (df['duration_seconds'] < 150)]),
+        '150-200s': len(df[(df['duration_seconds'] >= 150) & (df['duration_seconds'] < 200)]),
+        '200+s': len(df[df['duration_seconds'] >= 200])
+    }
+    duration_distribution = [{'range': k, 'count': v} for k, v in duration_buckets.items()]
+    
+    # Time Between Seizures (intervals in days)
+    df_sorted = df.sort_values('timestamp', ascending=True)
+    df_sorted['date_only'] = df_sorted['timestamp'].dt.date
+    seizure_dates = df_sorted['date_only'].unique()
+    
+    intervals = []
+    for i in range(1, len(seizure_dates)):
+        interval_days = (seizure_dates[i] - seizure_dates[i-1]).days
+        intervals.append(interval_days)
+    
+    # Create time between seizures data for chart
+    time_between = []
+    for i, interval in enumerate(intervals):
+        time_between.append({
+            'seizure_number': i + 2,  # Start from 2nd seizure
+            'days_since_previous': interval,
+            'date': seizure_dates[i+1].strftime('%Y-%m-%d') if i+1 < len(seizure_dates) else ''
+        })
+    
     # Duration statistics
     duration_stats = {
         'mean': round(df['duration_seconds'].mean(), 1),
@@ -155,6 +210,10 @@ def prepare_chart_data(df):
         'daily_frequency': daily_freq.to_dict('records'),
         'hour_frequency': hour_freq.to_dict('records'),
         'day_frequency': day_freq.to_dict('records'),
+        'monthly_frequency': monthly_freq.to_dict('records'),
+        'heatmap': heatmap_formatted,
+        'duration_distribution': duration_distribution,
+        'time_between_seizures': time_between,
         'duration_stats': duration_stats,
         'food_analysis': food_analysis,
         'timeline': timeline_data.to_dict('records')

@@ -336,6 +336,36 @@
 
         <div class="two-column">
             <div class="chart-container">
+                <div class="chart-title">� Monthly Trends</div>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">📊 Duration Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="durationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container" style="margin-bottom: 30px;">
+            <div class="chart-title">🔥 Seizure Risk Heatmap (Hour × Day of Week)</div>
+            <div id="heatmapContainer" style="overflow-x: auto; padding: 20px 0;">
+                <canvas id="heatmapCanvas" style="max-width: 100%;"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">⏱️ Time Between Seizures</div>
+            <div class="chart-wrapper">
+                <canvas id="timeIntervalChart"></canvas>
+            </div>
+        </div>
+
+        <div class="two-column">
+            <div class="chart-container">
                 <div class="chart-title">📆 Day of Week Pattern</div>
                 <div class="chart-wrapper">
                     <canvas id="dayChart"></canvas>
@@ -534,6 +564,98 @@
             section.innerHTML = insights;
         }
 
+        function createHeatmap(heatmapData) {
+            const canvas = document.getElementById('heatmapCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const hours = 24;
+            const days = 7;
+            const cellSize = 30;
+            const labelWidth = 50;
+            const labelHeight = 25;
+            const padding = 10;
+            
+            canvas.width = labelWidth + (days * cellSize) + (padding * 2);
+            canvas.height = labelHeight + (hours * cellSize) + (padding * 2);
+            
+            // Find max count for color scaling
+            const maxCount = Math.max(...heatmapData.map(d => d.count), 1);
+            
+            // Color mapping function (green theme)
+            const getColor = (count) => {
+                if (count === 0) return '#ece5d7';
+                const intensity = count / maxCount;
+                // Light green to dark green
+                if (intensity < 0.33) return '#c8d9c8';
+                if (intensity < 0.66) return '#6fa86f';
+                return '#2d5a3d';
+            };
+            
+            // Draw labels for days
+            const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            ctx.font = '12px Georgia, serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#1a4d2e';
+            
+            for (let i = 0; i < days; i++) {
+                ctx.fillText(dayLabels[i], labelWidth + (i * cellSize) + (cellSize / 2), padding + (labelHeight / 2));
+            }
+            
+            // Draw labels for hours and cells
+            ctx.textAlign = 'right';
+            for (let hour = 0; hour < hours; hour++) {
+                const period = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+                ctx.fillText(`${displayHour} ${period}`, labelWidth - 5, labelHeight + padding + (hour * cellSize) + (cellSize / 2));
+            }
+            
+            // Draw cells
+            heatmapData.forEach(cell => {
+                const x = labelWidth + padding + (cell.day_index * cellSize);
+                const y = labelHeight + padding + (cell.hour * cellSize);
+                const color = getColor(cell.count);
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, cellSize, cellSize);
+                
+                // Border
+                ctx.strokeStyle = '#d4c5a9';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, cellSize, cellSize);
+                
+                // Text
+                if (cell.count > 0) {
+                    ctx.fillStyle = cell.count > maxCount * 0.5 ? '#f5f1e8' : '#1a4d2e';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(cell.count, x + (cellSize / 2), y + (cellSize / 2));
+                }
+            });
+            
+            // Add legend
+            const legendY = canvas.height + 15;
+            ctx.font = '12px Georgia, serif';
+            ctx.fillStyle = '#1a4d2e';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Low', padding, legendY);
+            
+            // Legend gradient
+            const gradientWidth = 100;
+            const gradient = ctx.createLinearGradient(padding + 25, legendY, padding + 25 + gradientWidth, legendY);
+            gradient.addColorStop(0, '#ece5d7');
+            gradient.addColorStop(0.5, '#6fa86f');
+            gradient.addColorStop(1, '#2d5a3d');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(padding + 25, legendY - 5, gradientWidth, 10);
+            
+            ctx.fillStyle = '#1a4d2e';
+            ctx.textAlign = 'right';
+            ctx.fillText('High', padding + 25 + gradientWidth + 10, legendY);
+        }
+
         function renderCharts(chartsData) {
             // Daily Chart
             const dailyCtx = document.getElementById('dailyChart').getContext('2d');
@@ -572,6 +694,120 @@
                     }
                 }
             });
+
+            // Monthly Chart
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            if (charts.monthly) charts.monthly.destroy();
+            charts.monthly = new Chart(monthlyCtx, {
+                type: 'line',
+                data: {
+                    labels: chartsData.monthly_frequency.map(m => m.month),
+                    datasets: [{
+                        label: 'Seizures',
+                        data: chartsData.monthly_frequency.map(m => m.count),
+                        borderColor: '#2d5a3d',
+                        backgroundColor: 'rgba(45, 90, 61, 0.15)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#2d5a3d',
+                        pointBorderColor: '#f5f1e8',
+                        pointBorderWidth: 3,
+                        pointRadius: 7,
+                        pointHoverRadius: 9,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Duration Distribution Histogram
+            const durationCtx = document.getElementById('durationChart').getContext('2d');
+            if (charts.duration) charts.duration.destroy();
+            charts.duration = new Chart(durationCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartsData.duration_distribution.map(d => d.range),
+                    datasets: [{
+                        label: 'Count',
+                        data: chartsData.duration_distribution.map(d => d.count),
+                        backgroundColor: '#4a7c59',
+                        borderColor: '#2d5a3d',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Time Between Seizures Chart
+            const timeIntervalCtx = document.getElementById('timeIntervalChart').getContext('2d');
+            if (charts.timeInterval) charts.timeInterval.destroy();
+            charts.timeInterval = new Chart(timeIntervalCtx, {
+                type: 'line',
+                data: {
+                    labels: chartsData.time_between_seizures.map((_, i) => `Interval ${i + 1}`),
+                    datasets: [{
+                        label: 'Days',
+                        data: chartsData.time_between_seizures.map(t => t.days_since_previous),
+                        borderColor: '#c1566c',
+                        backgroundColor: 'rgba(193, 86, 108, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#c1566c',
+                        pointBorderColor: '#f5f1e8',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' },
+                            title: { display: true, text: 'Days' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(45, 90, 61, 0.05)' }
+                        }
+                    }
+                }
+            });
+
+            // Heatmap using canvas
+            createHeatmap(chartsData.heatmap);
 
             // Hour Chart
             const hourCtx = document.getElementById('hourChart').getContext('2d');
