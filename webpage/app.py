@@ -28,8 +28,11 @@ def load_seizure_data():
         # Extract whether food was eaten
         df['food_eaten'] = df['Eaten'].astype(str).str.lower() == 'true'
         
+        # Extract period data - True if 'Peiod' column is True (note: typo in CSV)
+        df['period'] = df['Peiod'].astype(str).str.lower() == 'true'
+        
         # Select only the columns we need
-        df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten']]
+        df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten', 'period']]
         
         # Remove rows with invalid timestamps
         df = df.dropna(subset=['timestamp'])
@@ -68,6 +71,14 @@ def calculate_statistics(df):
     food_eaten_count = df[df['food_eaten'] == True].shape[0]
     no_food_count = df[df['food_eaten'] == False].shape[0]
     
+    # Period correlation
+    period_count = df[df['period'] == True].shape[0]
+    non_period_count = df[df['period'] == False].shape[0]
+    
+    # Average duration during period vs outside period
+    period_avg_duration = df[df['period'] == True]['duration_seconds'].mean() if period_count > 0 else 0
+    non_period_avg_duration = df[df['period'] == False]['duration_seconds'].mean() if non_period_count > 0 else 0
+    
     # Recent activity (last 7 days)
     last_7_days = df[df['timestamp'] >= datetime.now() - timedelta(days=7)]
     recent_seizures = len(last_7_days)
@@ -82,6 +93,10 @@ def calculate_statistics(df):
         'max_duration': int(max_duration),
         'food_eaten_count': food_eaten_count,
         'no_food_count': no_food_count,
+        'period_related_count': period_count,
+        'non_period_count': non_period_count,
+        'period_avg_duration': round(period_avg_duration, 1),
+        'non_period_avg_duration': round(non_period_avg_duration, 1),
         'recent_seizures_7_days': recent_seizures,
         'first_record': df_sorted['timestamp'].min().strftime('%Y-%m-%d'),
         'last_record': df_sorted['timestamp'].max().strftime('%Y-%m-%d')
@@ -131,9 +146,10 @@ def prepare_chart_data(df):
     }
     
     # Time series data (most recent first for display)
-    timeline_data = df.sort_values('timestamp', ascending=False)[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten']].copy()
+    timeline_data = df.sort_values('timestamp', ascending=False)[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten', 'period']].copy()
     timeline_data['timestamp'] = timeline_data['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     timeline_data['food_eaten'] = timeline_data['food_eaten'].astype(bool)
+    timeline_data['period'] = timeline_data['period'].astype(bool)
     
     return {
         'daily_frequency': daily_freq.to_dict('records'),

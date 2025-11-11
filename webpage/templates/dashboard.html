@@ -13,11 +13,11 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Georgia', 'Garamond', serif;
+            background: linear-gradient(135deg, #1a4d2e 0%, #2d5a3d 50%, #3d6b4f 100%);
             min-height: 100vh;
             padding: 20px;
-            color: #333;
+            color: #2d3e35;
         }
 
         .container {
@@ -26,27 +26,34 @@
         }
 
         .header {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, #8b9a7c 0%, #a0b896 100%);
+            padding: 50px 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            margin-bottom: 40px;
+            text-align: center;
+            border: 3px solid #d4c5a9;
         }
 
         .header h1 {
-            font-size: 32px;
-            color: #667eea;
-            margin-bottom: 10px;
+            font-size: 48px;
+            color: #1a4d2e;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.3);
         }
 
         .header p {
-            color: #666;
-            font-size: 16px;
+            color: #3d5a47;
+            font-size: 18px;
+            font-style: italic;
+            margin-bottom: 5px;
         }
 
         .last-updated {
-            font-size: 12px;
-            color: #999;
+            font-size: 13px;
+            color: #4d6d5a;
             margin-top: 10px;
         }
 
@@ -58,48 +65,57 @@
         }
 
         .stat-card {
-            background: white;
-            padding: 20px;
+            background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%);
+            padding: 25px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid #2d5a3d;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
 
         .stat-label {
-            color: #999;
-            font-size: 13px;
-            font-weight: 600;
+            color: #5a6d62;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
         }
 
         .stat-value {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: bold;
-            color: #333;
+            color: #1a4d2e;
             margin-bottom: 8px;
         }
 
         .stat-subtitle {
-            color: #666;
+            color: #6d7d75;
             font-size: 14px;
         }
 
         .chart-container {
-            background: white;
-            padding: 25px;
+            background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%);
+            padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             margin-bottom: 30px;
+            border-top: 4px solid #2d5a3d;
         }
 
         .chart-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a4d2e;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid #c4b5a0;
+            font-family: 'Georgia', serif;
         }
 
         .chart-wrapper {
@@ -122,27 +138,29 @@
         }
 
         .insights-section {
-            background: white;
-            padding: 25px;
+            background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%);
+            padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             margin-bottom: 30px;
+            border-top: 4px solid #2d5a3d;
         }
 
         .insights-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a4d2e;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid #c4b5a0;
+            font-family: 'Georgia', serif;
         }
 
         .insight-item {
             display: flex;
             align-items: center;
             padding: 15px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #d4c5a9;
         }
 
         .insight-item:last-child {
@@ -153,7 +171,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: #f0f0f0;
+            background: #2d5a3d;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -163,32 +181,35 @@
         }
 
         .insight-content h3 {
-            color: #333;
-            font-size: 14px;
+            color: #1a4d2e;
+            font-size: 15px;
             margin-bottom: 5px;
+            font-weight: 700;
         }
 
         .insight-content p {
-            color: #666;
-            font-size: 13px;
+            color: #6d7d75;
+            font-size: 14px;
         }
 
         .data-table {
             overflow-x: auto;
-            background: white;
-            padding: 25px;
+            background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%);
+            padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             margin-bottom: 30px;
+            border-top: 4px solid #2d5a3d;
         }
 
         .data-table-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a4d2e;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid #c4b5a0;
+            font-family: 'Georgia', serif;
         }
 
         table {
@@ -197,43 +218,62 @@
         }
 
         thead {
-            background: #f8f9fa;
+            background: #2d5a3d;
         }
 
         th {
-            padding: 12px;
+            padding: 14px;
             text-align: left;
-            font-weight: 600;
-            color: #666;
+            font-weight: 700;
+            color: #f5f1e8;
             font-size: 13px;
             text-transform: uppercase;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid #1a4d2e;
+            letter-spacing: 0.5px;
         }
 
         td {
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #333;
+            padding: 12px 14px;
+            border-bottom: 1px solid #d4c5a9;
+            color: #2d3e35;
             font-size: 14px;
         }
 
         tr:hover {
-            background: #f8f9fa;
+            background: #e8dfd2;
         }
 
         .food-yes {
-            background: #d4edda;
-            color: #155724;
-            padding: 4px 8px;
+            background: #4a7c59;
+            color: #f5f1e8;
+            padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 600;
         }
 
         .food-no {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 4px 8px;
+            background: #8b7355;
+            color: #f5f1e8;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .period-yes {
+            background: #c1566c;
+            color: #f5f1e8;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .period-no {
+            background: #7a9d8e;
+            color: #f5f1e8;
+            padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 600;
@@ -241,32 +281,32 @@
 
         .loading {
             text-align: center;
-            color: #666;
+            color: #6d7d75;
             padding: 40px;
         }
 
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background: #a06858;
+            color: #f5f1e8;
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 30px;
         }
 
         .stat-card.alert {
-            border-left-color: #dc3545;
+            border-left-color: #a06858;
         }
 
         .stat-value.alert {
-            color: #dc3545;
+            color: #a06858;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 Seizure Monitoring Dashboard</h1>
-            <p>Comprehensive analysis and tracking of seizure patterns</p>
+            <h1>✨ Kylie's Seizure Wellness Dashboard ✨</h1>
+            <p>Comprehensive health insights and tracking</p>
             <div class="last-updated">Last updated: <span id="lastUpdated">--</span></div>
         </div>
 
@@ -319,11 +359,12 @@
                         <th>Duration (seconds)</th>
                         <th>Hour of Day</th>
                         <th>Day of Week</th>
+                        <th>Period</th>
                         <th>Food Eaten</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="5" class="loading">Loading data...</td></tr>
+                    <tr><td colspan="6" class="loading">Loading data...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -417,6 +458,11 @@
                     mostCommonHour = item.hour;
                 }
             });
+            
+            // Convert to 12-hour format
+            const period = mostCommonHour >= 12 ? 'PM' : 'AM';
+            const displayHour = mostCommonHour % 12 === 0 ? 12 : mostCommonHour % 12;
+            const timeOfDay = mostCommonHour < 12 ? 'morning' : mostCommonHour < 17 ? 'afternoon' : 'evening';
 
             // Find most common day
             let mostCommonDay = 'Monday';
@@ -434,13 +480,13 @@
             const foodImpact = foodDifference > 10 ? 'longer' : foodDifference < -10 ? 'shorter' : 'similar';
 
             const insights = `
-                <div class="insights-title">Key Insights</div>
+                <div class="insights-title">💚 Key Insights</div>
                 
                 <div class="insight-item">
                     <div class="insight-icon">⏰</div>
                     <div class="insight-content">
                         <h3>Peak Time Pattern</h3>
-                        <p>Most seizures occur around ${mostCommonHour}:00 (${mostCommonHour < 12 ? 'morning' : mostCommonHour < 17 ? 'afternoon' : 'evening'})</p>
+                        <p>Most seizures occur around ${displayHour}:00 ${period} (${timeOfDay})</p>
                     </div>
                 </div>
 
@@ -467,6 +513,22 @@
                         <p>${stats.date_range_days} days of data tracked with ${stats.total_seizures} recorded seizures</p>
                     </div>
                 </div>
+                
+                <div class="insight-item">
+                    <div class="insight-icon">🔴</div>
+                    <div class="insight-content">
+                        <h3>Period Tracking</h3>
+                        <p>${stats.period_related_count || 0} seizures recorded during period, ${stats.non_period_count || 0} outside period</p>
+                    </div>
+                </div>
+                
+                <div class="insight-item">
+                    <div class="insight-icon">💪</div>
+                    <div class="insight-content">
+                        <h3>Duration & Period</h3>
+                        <p>Seizures during period: avg ${stats.period_avg_duration?.toFixed(1) || 0}s vs outside period: avg ${stats.non_period_avg_duration?.toFixed(1) || 0}s</p>
+                    </div>
+                </div>
             `;
 
             section.innerHTML = insights;
@@ -483,15 +545,15 @@
                     datasets: [{
                         label: 'Seizures',
                         data: chartsData.daily_frequency.map(d => d.count),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderColor: '#2d5a3d',
+                        backgroundColor: 'rgba(45, 90, 61, 0.1)',
                         tension: 0.4,
                         fill: true,
-                        pointBackgroundColor: '#667eea',
-                        pointBorderColor: '#fff',
+                        pointBackgroundColor: '#2d5a3d',
+                        pointBorderColor: '#f5f1e8',
                         pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        pointRadius: 5,
+                        pointHoverRadius: 7
                     }]
                 },
                 options: {
@@ -499,7 +561,14 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(45, 90, 61, 0.05)' }
+                        }
                     }
                 }
             });
@@ -507,16 +576,27 @@
             // Hour Chart
             const hourCtx = document.getElementById('hourChart').getContext('2d');
             if (charts.hour) charts.hour.destroy();
+            
+            // Convert 24-hour to 12-hour format with AM/PM
+            const hourLabels = chartsData.hour_frequency.map(h => {
+                const hour = h.hour;
+                const period = hour >= 12 ? 'PM' : 'AM';
+                const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+                return `${displayHour} ${period}`;
+            });
+            
             charts.hour = new Chart(hourCtx, {
                 type: 'bar',
                 data: {
-                    labels: chartsData.hour_frequency.map(h => `${h.hour}:00`),
+                    labels: hourLabels,
                     datasets: [{
                         label: 'Seizures',
                         data: chartsData.hour_frequency.map(h => h.count),
-                        backgroundColor: '#764ba2',
-                        borderRadius: 4,
-                        borderSkipped: false
+                        backgroundColor: '#2d5a3d',
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        borderColor: '#1a4d2e',
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -524,7 +604,14 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
                     }
                 }
             });
@@ -539,9 +626,11 @@
                     datasets: [{
                         label: 'Seizures',
                         data: chartsData.day_frequency.map(d => d.count),
-                        backgroundColor: '#f093fb',
-                        borderRadius: 4,
-                        borderSkipped: false
+                        backgroundColor: '#4a7c59',
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        borderColor: '#2d5a3d',
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -549,7 +638,14 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
                     }
                 }
             });
@@ -564,9 +660,11 @@
                     datasets: [{
                         label: 'Avg Duration (seconds)',
                         data: [chartsData.food_analysis.food_eaten_avg, chartsData.food_analysis.no_food_avg],
-                        backgroundColor: ['#4CAF50', '#FF6B6B'],
-                        borderRadius: 4,
-                        borderSkipped: false
+                        backgroundColor: ['#4a7c59', '#8b7355'],
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        borderColor: ['#2d5a3d', '#6b5344'],
+                        borderWidth: 1
                     }]
                 },
                 options: {
@@ -574,7 +672,13 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: 'rgba(45, 90, 61, 0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
                     }
                 }
             });
@@ -584,7 +688,7 @@
             const tbody = document.getElementById('tableBody');
             
             if (!timeline || timeline.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
                 return;
             }
 
@@ -594,6 +698,9 @@
                     <td>${record.duration_seconds}s</td>
                     <td>${record.hour_of_day}:00</td>
                     <td>${record.day_of_week}</td>
+                    <td><span class="${record.period ? 'period-yes' : 'period-no'}">
+                        ${record.period ? 'Yes' : 'No'}
+                    </span></td>
                     <td><span class="${record.food_eaten ? 'food-yes' : 'food-no'}">
                         ${record.food_eaten ? 'Yes' : 'No'}
                     </span></td>
