@@ -213,23 +213,97 @@
             const stats = data.statistics;
             const charts = data.charts;
             const section = document.getElementById('insightsSection');
-            if (!stats) { section.innerHTML = '<div class="error">No insights</div>'; return; }
+
+            if (!stats || Object.keys(stats).length === 0) {
+                section.innerHTML = '<div class="error">No insights available</div>';
+                return;
+            }
+
+            // Find most common hour
+            let mostCommonHour = 12;
+            let maxCount = 0;
+            charts.hour_frequency.forEach(item => {
+                if (item.count > maxCount) {
+                    maxCount = item.count;
+                    mostCommonHour = item.hour;
+                }
+            });
             
-            let mostCommonHour = 12, maxCount = 0;
-            charts.hour_frequency.forEach(item => { if (item.count > maxCount) { maxCount = item.count; mostCommonHour = item.hour; } });
-            const displayHour = String(mostCommonHour).padStart(2, '0');
-            
+            // Convert to 12-hour format
+            const period = mostCommonHour >= 12 ? 'PM' : 'AM';
+            const displayHour = mostCommonHour % 12 === 0 ? 12 : mostCommonHour % 12;
+            const timeOfDay = mostCommonHour < 12 ? 'morning' : mostCommonHour < 17 ? 'afternoon' : 'evening';
+
+            // Find most common day
             let mostCommonDay = 'Monday';
             maxCount = 0;
-            charts.day_frequency.forEach(item => { if (item.count > maxCount) { maxCount = item.count; mostCommonDay = item.day; } });
+            charts.day_frequency.forEach(item => {
+                if (item.count > maxCount) {
+                    maxCount = item.count;
+                    mostCommonDay = item.day;
+                }
+            });
 
-            section.innerHTML = `
-                <div class="insights-title">Key Insights</div>
-                <div class="insight-item"><div class="insight-icon">⏰</div><div class="insight-content"><h3>Peak Time</h3><p>${displayHour}:00 (24h)</p></div></div>
-                <div class="insight-item"><div class="insight-icon">📆</div><div class="insight-content"><h3>Weekly Peak</h3><p>${mostCommonDay}</p></div></div>
-                <div class="insight-item"><div class="insight-icon">📊</div><div class="insight-content"><h3>Data Summary</h3><p>${stats.date_range_days} days tracked, ${stats.total_seizures} seizures</p></div></div>
+            const foodAvg = charts.food_analysis.food_eaten_avg;
+            const noFoodAvg = charts.food_analysis.no_food_avg;
+            const foodDifference = foodAvg - noFoodAvg;
+            const foodImpact = foodDifference > 10 ? 'longer' : foodDifference < -10 ? 'shorter' : 'similar';
+
+            const insights = `
+                <div class="insights-title">💚 Key Insights</div>
+                
+                <div class="insight-item">
+                    <div class="insight-icon">⏰</div>
+                    <div class="insight-content">
+                        <h3>Peak Time Pattern</h3>
+                        <p>Most seizures occur around ${displayHour}:00 ${period} (${timeOfDay})</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">📆</div>
+                    <div class="insight-content">
+                        <h3>Weekly Pattern</h3>
+                        <p>${mostCommonDay} has the most recorded seizures</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">🍽️</div>
+                    <div class="insight-content">
+                        <h3>Food Correlation</h3>
+                        <p>Seizures with food are ${foodImpact === 'longer' ? `${Math.abs(foodDifference).toFixed(1)}s longer` : foodImpact === 'shorter' ? `${Math.abs(foodDifference).toFixed(1)}s shorter` : 'similar in duration'}</p>
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon">📊</div>
+                    <div class="insight-content">
+                        <h3>Tracking Summary</h3>
+                        <p>${stats.date_range_days} days of data tracked with ${stats.total_seizures} recorded seizures</p>
+                    </div>
+                </div>
+                
+                <div class="insight-item">
+                    <div class="insight-icon">🔴</div>
+                    <div class="insight-content">
+                        <h3>Period Tracking</h3>
+                        <p>${stats.period_related_count || 0} seizures recorded during period, ${stats.non_period_count || 0} outside period</p>
+                    </div>
+                </div>
+                
+                <div class="insight-item">
+                    <div class="insight-icon">💪</div>
+                    <div class="insight-content">
+                        <h3>Duration & Period</h3>
+                        <p>Seizures during period: avg ${stats.period_avg_duration?.toFixed(1) || 0}s vs outside period: avg ${stats.non_period_avg_duration?.toFixed(1) || 0}s</p>
+                    </div>
+                </div>
             `;
+
+            section.innerHTML = insights;
         }
+
 
         // Horizontal heatmap: hours across X (military 00-23), days down Y
         function createHeatmap(heatmapData) {
