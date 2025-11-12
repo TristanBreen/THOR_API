@@ -12,9 +12,12 @@ from emailSeizureLogs import send_seizure_email
 
 app = Flask(__name__)
 
-# Use current directory for CSV files
-SEIZURE_FILE = "seizures.csv"
-PAIN_FILE = "pain.csv"
+# Get the directory where the app is running
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Use absolute paths for CSV files
+SEIZURE_FILE = os.path.join(APP_DIR, "seizures.csv")
+PAIN_FILE = os.path.join(APP_DIR, "pain.csv")
 
 def getGoodMorningString():
     messages = [
