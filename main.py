@@ -108,10 +108,18 @@ def trackSeizure(duration, period, eaten, foodEaten = ""):
     period = period == "Yes"
     eaten = eaten == "Yes"
 
-
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(SEIZURE_FILE), exist_ok=True)
+    
+    # Create file with headers if it doesn't exist
+    if not os.path.exists(SEIZURE_FILE):
+        with open(SEIZURE_FILE, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Date', 'Time', 'Duration', 'Period', 'Eaten', 'FoodEaten'])
     
     with open(SEIZURE_FILE, 'a', newline='') as file:
         writer = csv.writer(file)
@@ -125,11 +133,20 @@ def trackPain(pain):
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
     
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(PAIN_FILE), exist_ok=True)
+    
+    # Create file with headers if it doesn't exist
+    if not os.path.exists(PAIN_FILE):
+        with open(PAIN_FILE, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Date', 'Time', 'Pain'])
+    
     with open(PAIN_FILE, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([date, time, pain])
 
-    print(f"[LOG] Seizure logged to {PAIN_FILE}")
+    print(f"[LOG] Pain logged to {PAIN_FILE}")
     return f"Pain has been logged"
 
 def main(lat, lon):
