@@ -12,8 +12,9 @@ from emailSeizureLogs import send_seizure_email
 
 app = Flask(__name__)
 
-SEIZURE_FILE = "/home/tristan/API/API_V2/seizures.csv"
-PAIN_FILE = "/home/tristan/API/API_V2/pain.csv"
+# Use current directory for CSV files
+SEIZURE_FILE = "seizures.csv"
+PAIN_FILE = "pain.csv"
 
 def getGoodMorningString():
     messages = [

@@ -10,14 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire app
 COPY . .
 
-# Create data directory and initialize CSV files with headers
-RUN mkdir -p /home/tristan/API/API_Repoed
-
-# Initialize seizures.csv with headers if needed
-RUN echo "Date,Time,Duration,Period,Eaten,FoodEaten" > /home/tristan/API/API_Repoed/seizures.csv
-
-# Initialize pain.csv with headers
-RUN echo "Date,Time,Pain" > /home/tristan/API/API_Repoed/pain.csv
+# Initialize CSV files with headers in the working directory
+RUN echo "Date,Time,Duration,Period,Eaten,FoodEaten" > seizures.csv
+RUN echo "Date,Time,Pain" > pain.csv
 
 # Expose the Flask port
 EXPOSE 5000
