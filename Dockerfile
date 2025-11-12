@@ -14,10 +14,10 @@ COPY . .
 RUN mkdir -p /home/tristan/API/API_V2
 
 # Initialize seizures.csv with headers if needed
-RUN echo "Date,Time,Duration,Period,Eaten,FoodEaten" > /home/tristan/API/API_V2/seizures.csv
+RUN echo "Date,Time,Duration,Period,Eaten,FoodEaten" > /home/tristan/API/API_Repoed/seizures.csv
 
 # Initialize pain.csv with headers
-RUN echo "Date,Time,Pain" > /home/tristan/API/API_V2/pain.csv
+RUN echo "Date,Time,Pain" > /home/tristan/API/API_Repoed/pain.csv
 
 # Expose the Flask port
 EXPOSE 5000
