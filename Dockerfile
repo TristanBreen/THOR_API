@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create data directory and initialize CSV files with headers
-RUN mkdir -p /home/tristan/API/API_V2
+RUN mkdir -p /home/tristan/API/API_Repoed
 
 # Initialize seizures.csv with headers if needed
 RUN echo "Date,Time,Duration,Period,Eaten,FoodEaten" > /home/tristan/API/API_Repoed/seizures.csv
