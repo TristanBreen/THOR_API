@@ -10,8 +10,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire app
 COPY . .
 
-# Make sure the seizure log file exists (optional safeguard)
-RUN mkdir -p /app/data && touch /app/data/seizures.csv
+# Create data directory and initialize CSV files with headers
+RUN mkdir -p /home/tristan/API/API_V2
+
+# Initialize seizures.csv with headers if needed
+RUN echo "Date,Time,Duration,Period,Eaten,FoodEaten" > /home/tristan/API/API_V2/seizures.csv
+
+# Initialize pain.csv with headers
+RUN echo "Date,Time,Pain" > /home/tristan/API/API_V2/pain.csv
 
 # Expose the Flask port
 EXPOSE 5000
