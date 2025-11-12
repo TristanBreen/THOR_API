@@ -13,6 +13,7 @@ from emailSeizureLogs import send_seizure_email
 app = Flask(__name__)
 
 SEIZURE_FILE = "/home/tristan/API/API_V2/seizures.csv"
+PAIN_FILE = "/home/tristan/API/API_V2/pain.csv"
 
 def getGoodMorningString():
     messages = [
@@ -119,6 +120,18 @@ def trackSeizure(duration, period, eaten, foodEaten = ""):
     print(f"[LOG] Seizure logged to {SEIZURE_FILE}")
     return f"Seizure for {duration} seconds has been logged"
 
+def trackPain(pain):
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d")
+    time = now.strftime("%H:%M:%S")
+    
+    with open(PAIN_FILE, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([date, time, pain])
+
+    print(f"[LOG] Seizure logged to {PAIN_FILE}")
+    return f"Pain has been logged"
+
 def main(lat, lon):
     return concatMessages(lat, lon)
 
@@ -155,6 +168,17 @@ def trackseizure():
         message = trackSeizure(duration, period, eaten, foodEaten)
 
     send_seizure_email(file_path=SEIZURE_FILE)
+
+    return jsonify({"message": message})
+
+@app.route("/pain", methods=["GET"])
+def trackpain():
+    pain = request.args.get("pain", type=int)
+
+    if pain is None or not isinstance(pain, int):
+        return jsonify({"error": "Please provide pain number of scale from 1 - 10"}), 400
+
+    message = trackPain(pain)
 
     return jsonify({"message": message})
 
