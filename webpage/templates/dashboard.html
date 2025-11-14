@@ -133,6 +133,12 @@
                     <canvas id="foodChart"></canvas>
                 </div>
             </div>
+            <div class="chart-container">
+                <div class="chart-title">Pain Tracking with Seizure Events</div>
+                <div class="chart-wrapper">
+                    <canvas id="painChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <div class="data-table">
@@ -188,6 +194,7 @@
                 renderStats(data.statistics);
                 renderInsights(data);
                 renderCharts(data.charts);
+                renderPainChart(data.pain_charts);
                 renderTable(data.charts.timeline);
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -449,6 +456,176 @@
                 type: 'bar',
                 data: { labels: ['With Food','Without Food'], datasets: [{ label: 'Avg Duration', data: [chartsData.food_analysis.food_eaten_avg, chartsData.food_analysis.no_food_avg], backgroundColor: ['#4a7c59','#8b7355'] }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            });
+        }
+
+        function renderPainChart(painData) {
+            const painCtx = document.getElementById('painChart').getContext('2d');
+            if (charts.pain) charts.pain.destroy();
+            
+            if (!painData || !painData.pain_timeline || painData.pain_timeline.length === 0) {
+                // No pain data available
+                return;
+            }
+            
+            // Extract pain data points with timestamps
+            const painLabels = painData.pain_timeline.map(p => p.timestamp);
+            const painValues = painData.pain_timeline.map(p => p.pain);
+            
+            // Create seizure marker points - map each seizure to its actual position
+            const seizureData = [];
+            painData.seizure_markers.forEach(seizure => {
+                const seizureTimestamp = seizure.timestamp;
+                
+                // Find if this exact timestamp exists in pain timeline
+                const exactIndex = painLabels.indexOf(seizureTimestamp);
+                
+                if (exactIndex !== -1) {
+                    // Exact match found
+                    seizureData.push(painValues[exactIndex]);
+                } else {
+                    // Find closest timestamp
+                    const seizureTime = new Date(seizureTimestamp).getTime();
+                    let closestIndex = 0;
+                    let closestDiff = Math.abs(new Date(painLabels[0]).getTime() - seizureTime);
+                    
+                    for (let i = 1; i < painLabels.length; i++) {
+                        const diff = Math.abs(new Date(painLabels[i]).getTime() - seizureTime);
+                        if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closestIndex = i;
+                        }
+                    }
+                    seizureData.push(painValues[closestIndex]);
+                }
+            });
+            
+            // Create combined labels that include both pain and seizure timestamps
+            const allTimestamps = [...painLabels];
+            const seizureTimestamps = painData.seizure_markers.map(s => s.timestamp);
+            
+            // Add seizure timestamps that aren't already in pain data
+            seizureTimestamps.forEach(st => {
+                if (!allTimestamps.includes(st)) {
+                    allTimestamps.push(st);
+                }
+            });
+            
+            // Sort all timestamps
+            allTimestamps.sort((a, b) => new Date(a) - new Date(b));
+            
+            // Map pain values to all timestamps (null for seizure-only timestamps)
+            const allPainValues = allTimestamps.map(ts => {
+                const idx = painLabels.indexOf(ts);
+                return idx !== -1 ? painValues[idx] : null;
+            });
+            
+            // Map seizure markers to all timestamps (null for non-seizure timestamps)
+            const allSeizureValues = allTimestamps.map(ts => {
+                const seizureIdx = seizureTimestamps.indexOf(ts);
+                if (seizureIdx !== -1) {
+                    // Find closest pain value for this seizure timestamp
+                    const painIdx = painLabels.indexOf(ts);
+                    if (painIdx !== -1) {
+                        return painValues[painIdx];
+                    } else {
+                        // Interpolate between closest pain points
+                        const seizureTime = new Date(ts).getTime();
+                        let closestIdx = 0;
+                        let closestDiff = Math.abs(new Date(painLabels[0]).getTime() - seizureTime);
+                        
+                        for (let i = 1; i < painLabels.length; i++) {
+                            const diff = Math.abs(new Date(painLabels[i]).getTime() - seizureTime);
+                            if (diff < closestDiff) {
+                                closestDiff = diff;
+                                closestIdx = i;
+                            }
+                        }
+                        return painValues[closestIdx];
+                    }
+                }
+                return null;
+            });
+            
+            // Create datasets
+            const datasets = [
+                {
+                    label: 'Pain Level',
+                    data: allPainValues,
+                    borderColor: '#2d5a3d',
+                    backgroundColor: 'rgba(45,90,61,0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2d5a3d',
+                    spanGaps: true
+                }
+            ];
+            
+            // Add seizure markers if any exist
+            if (allSeizureValues.some(v => v !== null)) {
+                datasets.push({
+                    label: 'Seizure Event',
+                    data: allSeizureValues,
+                    pointRadius: 8,
+                    pointBackgroundColor: '#c1566c',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    showLine: false,
+                    pointStyle: 'circle'
+                });
+            }
+            
+            charts.pain = new Chart(painCtx, {
+                type: 'line',
+                data: {
+                    labels: allTimestamps,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    if (context.dataset.label === 'Seizure Event') {
+                                        return 'Seizure occurred (Pain: ' + context.parsed.y + ')';
+                                    }
+                                    return 'Pain: ' + context.parsed.y;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: 'Pain Level (0-10)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
+                        }
+                    }
+                }
             });
         }
 
