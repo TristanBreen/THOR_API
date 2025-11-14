@@ -9,8 +9,8 @@ app = Flask(__name__)
 def load_seizure_data():
     """Load and process seizure data from CSV file"""
     try:
-        # Read CSV file from parent directory
-        csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'seizures.csv'))
+        # Read CSV file from /data directory (mounted volume)
+        csv_path = '/data/seizures.csv'
         
         df = pd.read_csv(csv_path)
         
