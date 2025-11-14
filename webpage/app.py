@@ -5,14 +5,16 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
+SEIZURES_CSV = '/data/seizures.csv' if os.path.exists('/data/seizures.csv') else 'seizures.csv'
+PAIN_CSV = '/data/pain.csv' if os.path.exists('/data/pain.csv') else 'pain.csv'
 
 def load_seizure_data():
     """Load and process seizure data from CSV file"""
     try:
         # Read CSV file from /data directory (mounted volume)
-        csv_path = '/data/seizures.csv'
+        #csv_path = '/data/seizures.csv'
         
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(SEIZURES_CSV)
         
         # Combine Date and Time columns into a timestamp
         df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
