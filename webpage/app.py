@@ -8,6 +8,30 @@ app = Flask(__name__)
 SEIZURES_CSV = '/data/seizures.csv' if os.path.exists('/data/seizures.csv') else 'seizures.csv'
 PAIN_CSV = '/data/pain.csv' if os.path.exists('/data/pain.csv') else 'pain.csv'
 
+def load_pain_data():
+    """Load and process pain data from CSV file"""
+    try:
+        df = pd.read_csv(PAIN_CSV)
+        # Strip whitespace from column names
+        df.columns = df.columns.str.strip()
+        
+        # Combine Date and Time columns into a timestamp
+        df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+        
+        # Remove rows with invalid timestamps
+        df = df.dropna(subset=['timestamp'])
+        
+        # Sort by timestamp
+        df = df.sort_values('timestamp', ascending=True)
+        
+        # Select only the columns we need
+        df = df[['timestamp', 'Pain']]
+        
+        return df
+    except Exception as e:
+        print(f"Error loading pain data: {e}")
+        return pd.DataFrame()
+
 def load_seizure_data():
     """Load and process seizure data from CSV file"""
     try:
@@ -221,6 +245,43 @@ def prepare_chart_data(df):
         'timeline': timeline_data.to_dict('records')
     }
 
+def prepare_pain_chart_data(pain_df, seizure_df):
+    """Prepare pain tracking data with seizure markers"""
+    if pain_df.empty:
+        return {
+            'pain_timeline': [],
+            'seizure_markers': []
+        }
+    
+    # Sort pain data by timestamp
+    pain_df = pain_df.sort_values('timestamp')
+    
+    # Get first pain timestamp
+    first_pain_timestamp = pain_df['timestamp'].min()
+    
+    # Filter seizures to only those after first pain recording
+    seizures_after_pain = seizure_df[seizure_df['timestamp'] >= first_pain_timestamp].copy()
+    
+    # Prepare pain timeline
+    pain_timeline = []
+    for _, row in pain_df.iterrows():
+        pain_timeline.append({
+            'timestamp': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'pain': int(row['Pain'])
+        })
+    
+    # Prepare seizure markers (timestamps where seizures occurred)
+    seizure_markers = []
+    for _, row in seizures_after_pain.iterrows():
+        seizure_markers.append({
+            'timestamp': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    return {
+        'pain_timeline': pain_timeline,
+        'seizure_markers': seizure_markers
+    }
+
 @app.route('/')
 def dashboard():
     return render_template('dashboard.html')
@@ -228,12 +289,15 @@ def dashboard():
 @app.route('/api/data')
 def get_data():
     df = load_seizure_data()
+    pain_df = load_pain_data()
     stats = calculate_statistics(df)
     charts = prepare_chart_data(df)
+    pain_charts = prepare_pain_chart_data(pain_df, df)
     
     return jsonify({
         'statistics': stats,
         'charts': charts,
+        'pain_charts': pain_charts,
         'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     })
 
