@@ -19,7 +19,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            # Go to your API repo
             cd /home/tristan/API/API_Repoed/THOR_API
             git pull --rebase
+
+            # Go to docker folder and restart everything
+            cd /home/tristan/Docker
             docker compose down
             docker compose up -d --build
