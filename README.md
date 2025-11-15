@@ -3,7 +3,8 @@
 **T**ristan's **H**ome **O**perational **R**epository
 
 A comprehensive health monitoring system designed to track seizures and pain levels with automated logging, visualization, and notifications. Written by Sonnet 4.5.
-CHECK OUT THE RUNNING DASHBOARD: http://68.0.162.91:5001/
+
+### CHECK OUT THE RUNNING DASHBOARD: http://68.0.162.91:5001/
 
 ---
 
