@@ -6,24 +6,19 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            # Go to your API repo
-            cd /home/tristan/API/API_Repoed/THOR_API
-            git pull --rebase
+      - name: Pull latest code and restart Docker
+        run: |
+          # Go to your API repo
+          cd /home/tristan/API/API_Repoed/THOR_API
+          git pull --rebase
 
-            # Go to docker folder and restart everything
-            cd /home/tristan/Docker
-            docker compose down
-            docker compose up -d --build
+          # Go to docker folder and restart everything
+          cd /home/tristan/Docker
+          docker compose down
+          docker compose up -d --build
