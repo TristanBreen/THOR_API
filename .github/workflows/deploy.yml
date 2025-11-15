@@ -14,11 +14,44 @@ jobs:
 
       - name: Pull latest code and restart Docker
         run: |
-          # Go to your API repo
-          cd /home/tristan/API/API_Repoed/THOR_API
-          git pull --rebase
+          set -euo pipefail
+          REPO="/home/tristan/API/API_Repoed/THOR_API"
+          DOCKER_DIR="/home/tristan/Docker"
 
-          # Go to docker folder and restart everything
-          cd /home/tristan/Docker
-          docker compose down
-          docker compose up -d --build
+          echo "== Deploy started at $(date -u) =="
+
+          cd "$REPO"
+
+          # Ignore pain.csv and seizures.csv permanently
+          git update-index --assume-unchanged pain.csv
+          git update-index --assume-unchanged seizures.csv
+
+          # Stash any other local changes
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Local changes detected (excluding ignored files) — stashing"
+            git stash push -u -m "autodeploy-$(date -u +%Y%m%d%H%M%S)" || true
+            STASHED=1
+          else
+            STASHED=0
+          fi
+
+          # Fetch and reset to origin/main
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd
+
+          git checkout main || true
+          git pull origin main || true
+
+          # Rebuild only the API and webpage containers
+          cd "$DOCKER_DIR"
+          docker compose up -d --build thor-api thor-webpage || docker compose up -d --build
+
+          # Attempt to reapply stash if there were other changes
+          if [ "$STASHED" -eq 1 ]; then
+            echo "Attempting to reapply stash..."
+            cd "$REPO"
+            git stash pop || echo "stash pop failed — manual resolution may be required"
+          fi
+
+          echo "$(date -u) - Deployment succeeded" >> /home/tristan/deploy.log
