@@ -15,18 +15,60 @@ jobs:
       - name: Backup data, pull latest code, and restart Docker
         run: |
           set -euo pipefail
+
           REPO="/home/tristan/API/API_Repoed/THOR_API"
           DOCKER_DIR="/home/tristan/Docker"
           BACKUP_DIR="/home/tristan/API/API_Repoed/deploy_backups"
+          DEPLOY_LOG="/home/tristan/API/API_Repoed/deploy.log"
 
-          echo "== Deploy started at $(date -u) =="
+          printf "== Deploy started at %s ==\n" "$(date -u)"
 
           cd "$REPO"
 
-          # Create backup directory if it doesn't exist
+          # ensure backup dir exists
           mkdir -p "$BACKUP_DIR"
 
-          # Backup pain.csv and seizures.csv
-          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+          TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
+
+          # Backup files safely using printf to avoid embedded-quote issues
           for FILE in pain.csv seizures.csv; do
-            if [ -f "$FIL]()
+            if [ -f "$FILE" ]; then
+              TARGET="$BACKUP_DIR/${FILE%.csv}_$TIMESTAMP.csv"
+              printf "Backing up %s -> %s\n" "$FILE" "$TARGET"
+              cp -- "$FILE" "$TARGET"
+            fi
+          done
+
+          # Make git ignore local modifications to these generated files
+          git update-index --assume-unchanged pain.csv || true
+          git update-index --assume-unchanged seizures.csv || true
+
+          # Stash other local changes (if any)
+          if [ -n "$(git status --porcelain)" ]; then
+            printf "Local changes detected (excluding ignored files) — stashing\n"
+            git stash push -u -m "autodeploy-$TIMESTAMP" || true
+            STASHED=1
+          else
+            STASHED=0
+          fi
+
+          # Ensure working tree matches remote main
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd
+
+          git checkout main || true
+          git pull origin main || true
+
+          # Rebuild only the services we want (faster / less disruptive)
+          cd "$DOCKER_DIR"
+          docker compose up -d --build thor-api thor-webpage || docker compose up -d --build
+
+          # Try to reapply stash if we stashed something
+          if [ "${STASHED:-0}" -eq 1 ]; then
+            printf "Attempting to reapply stash...\n"
+            cd "$REPO"
+            git stash pop || printf "stash pop failed — manual resolution may be required\n"
+          fi
+
+          printf "%s - Deployment succeeded\n" "$(date -u)" >> "$DEPLOY_LOG"
