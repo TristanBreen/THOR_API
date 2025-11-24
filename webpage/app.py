@@ -5,8 +5,26 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-SEIZURES_CSV = '/data/seizures.csv' if os.path.exists('/data/seizures.csv') else 'seizures.csv'
-PAIN_CSV = '/data/pain.csv' if os.path.exists('/data/pain.csv') else 'pain.csv'
+
+# Resolve CSV file paths: check server absolute path first, then local Data folder
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+
+# Check for server path first, then Docker mount, then local Data folder
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")):
+    SEIZURES_CSV = os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")
+elif os.path.exists('/data/seizures.csv'):
+    SEIZURES_CSV = '/data/seizures.csv'
+else:
+    SEIZURES_CSV = os.path.join(PARENT_DIR, "Data", "seizures.csv")
+
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")):
+    PAIN_CSV = os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")
+elif os.path.exists('/data/pain.csv'):
+    PAIN_CSV = '/data/pain.csv'
+else:
+    PAIN_CSV = os.path.join(PARENT_DIR, "Data", "pain.csv")
 
 def load_pain_data():
     """Load and process pain data from CSV file"""

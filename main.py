@@ -12,9 +12,20 @@ from emailSeizureLogs import send_seizure_email
 
 app = Flask(__name__)
 
+# Resolve CSV file paths: check server absolute path first, then local Data folder
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-SEIZURE_FILE = os.path.join(APP_DIR, "seizures.csv")
-PAIN_FILE = os.path.join(APP_DIR, "pain.csv")
+
+# Check for server path first
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")):
+    SEIZURE_FILE = os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")
+else:
+    SEIZURE_FILE = os.path.join(APP_DIR, "Data", "seizures.csv")
+
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")):
+    PAIN_FILE = os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")
+else:
+    PAIN_FILE = os.path.join(APP_DIR, "Data", "pain.csv")
 
 def getGoodMorningString():
     messages = [
