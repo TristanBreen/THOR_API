@@ -6,25 +6,34 @@ import os
 
 app = Flask(__name__)
 
-# Resolve CSV file paths: check server absolute path first, then local Data folder
+# Resolve CSV file paths: check server absolute path first, then Docker mount, then local Data folder
 SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(SCRIPT_DIR)
 
-# Check for server path first, then Docker mount, then local Data folder
-if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")):
-    SEIZURES_CSV = os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")
-elif os.path.exists('/data/seizures.csv'):
-    SEIZURES_CSV = '/data/seizures.csv'
+# Determine which base path to use (check in priority order)
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
+    # Server absolute path
+    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
+elif os.path.exists('/data/Data'):
+    # Docker mount path (THOR_API mounted to /data, so Data is at /data/Data)
+    BASE_DATA_DIR = '/data/Data'
+elif os.path.exists(os.path.join(PARENT_DIR, "Data")):
+    # Local relative path
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
 else:
-    SEIZURES_CSV = os.path.join(PARENT_DIR, "Data", "seizures.csv")
+    # Fallback: use local path and create directory if needed
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
 
-if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")):
-    PAIN_CSV = os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")
-elif os.path.exists('/data/pain.csv'):
-    PAIN_CSV = '/data/pain.csv'
-else:
-    PAIN_CSV = os.path.join(PARENT_DIR, "Data", "pain.csv")
+# Set CSV file paths
+SEIZURES_CSV = os.path.join(BASE_DATA_DIR, "seizures.csv")
+PAIN_CSV = os.path.join(BASE_DATA_DIR, "pain.csv")
+
+# Debug: Print which path is being used
+print(f"[WEBPAGE] Using BASE_DATA_DIR: {BASE_DATA_DIR}")
+print(f"[WEBPAGE] SEIZURES_CSV: {SEIZURES_CSV} (exists: {os.path.exists(SEIZURES_CSV)})")
+print(f"[WEBPAGE] PAIN_CSV: {PAIN_CSV} (exists: {os.path.exists(PAIN_CSV)})")
 
 def load_pain_data():
     """Load and process pain data from CSV file"""
