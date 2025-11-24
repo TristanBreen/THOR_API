@@ -330,17 +330,28 @@ def append_csv_data(csv_content):
 def track_apple_watch():
     """
     Endpoint to receive Apple Watch health data CSV from iOS Shortcuts
-    Accepts raw CSV content in request body
+    Accepts raw CSV content in request body OR multipart file upload
     """
     try:
-        # Get raw body content
-        csv_content = request.get_data(as_text=True)
+        # Check if it's a file upload (multipart form data)
+        if 'file' in request.files:
+            uploaded_file = request.files['file']
+            if uploaded_file.filename == '' or not uploaded_file.filename.endswith('.csv'):
+                return jsonify({
+                    "success": False,
+                    "error": "Invalid CSV file"
+                }), 400
+            csv_content = uploaded_file.read().decode('utf-8')
         
-        if not csv_content or not csv_content.strip():
-            return jsonify({
-                "success": False,
-                "error": "Request body is empty. Please send CSV content in the request body."
-            }), 400
+        # Otherwise, get raw body content
+        else:
+            csv_content = request.get_data(as_text=True)
+            
+            if not csv_content or not csv_content.strip():
+                return jsonify({
+                    "success": False,
+                    "error": "Request body is empty. Please send CSV content in the request body or as a file upload."
+                }), 400
         
         # Process the CSV data
         result = append_csv_data(csv_content)
