@@ -190,7 +190,7 @@ GET /seizure?duration={seconds}&period={yes/no}&eaten={yes/no}&foodEaten={descri
 ---
 
 #### 💊 Log Pain Level
-Record current pain level on a scale of 1-10.
+Record current pain level on a scale of 1-10 (attempting to use entire scale consistently).
 
 ```http
 GET /pain?pain={level}

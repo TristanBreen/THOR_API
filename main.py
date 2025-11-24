@@ -12,9 +12,25 @@ from emailSeizureLogs import send_seizure_email
 
 app = Flask(__name__)
 
+# Resolve CSV file paths: check server absolute path first, then local Data folder
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-SEIZURE_FILE = os.path.join(APP_DIR, "seizures.csv")
-PAIN_FILE = os.path.join(APP_DIR, "pain.csv")
+
+# Check for server path first
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")):
+    SEIZURE_FILE = os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")
+else:
+    SEIZURE_FILE = os.path.join(APP_DIR, "Data", "seizures.csv")
+
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")):
+    PAIN_FILE = os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")
+else:
+    PAIN_FILE = os.path.join(APP_DIR, "Data", "pain.csv")
+
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "appleWatchData.csv")):
+    APPLE_WATCH_FILE = os.path.join(SERVER_BASE_PATH, "Data", "appleWatchData.csv")
+else:
+    APPLE_WATCH_FILE = os.path.join(APP_DIR, "Data", "appleWatchData.csv")
 
 def getGoodMorningString():
     messages = [
@@ -150,6 +166,51 @@ def trackPain(pain):
     print(f"[LOG] Pain logged to {PAIN_FILE}")
     return f"Pain has been logged"
 
+def trackAppleWatchData(uploaded_file):
+    """
+    Appends data from uploaded Apple Watch CSV export to appleWatchData.csv
+    
+    Args:
+        uploaded_file: Flask file upload object containing the CSV file
+        
+    Returns:
+        str: Success message with number of rows appended
+    """
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(APPLE_WATCH_FILE), exist_ok=True)
+    
+    # Read the uploaded CSV file content
+    file_content = uploaded_file.read().decode('utf-8')
+    uploaded_csv = csv.reader(file_content.splitlines())
+    rows = list(uploaded_csv)
+    
+    if not rows:
+        return "Error: Uploaded file is empty"
+    
+    # Get header row from uploaded file
+    header_row = rows[0]
+    
+    # Check if appleWatchData.csv exists, create with header if not
+    file_exists = os.path.exists(APPLE_WATCH_FILE)
+    
+    if not file_exists:
+        with open(APPLE_WATCH_FILE, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header_row)
+    
+    # Append data rows (skip header row from uploaded file)
+    data_rows = rows[1:]
+    rows_appended = 0
+    
+    with open(APPLE_WATCH_FILE, 'a', newline='') as file:
+        writer = csv.writer(file)
+        for row in data_rows:
+            writer.writerow(row)
+            rows_appended += 1
+    
+    print(f"[LOG] Apple Watch data logged to {APPLE_WATCH_FILE} - {rows_appended} rows appended")
+    return f"Apple Watch data has been logged - {rows_appended} rows appended"
+
 def main(lat, lon):
     return concatMessages(lat, lon)
 
@@ -199,6 +260,25 @@ def trackpain():
     message = trackPain(pain)
 
     return jsonify({"message": message})
+
+@app.route("/applewatch", methods=["POST"])
+def trackapplewatch():
+    if 'file' not in request.files:
+        return jsonify({"error": "Please provide a CSV file in the 'file' field"}), 400
+    
+    uploaded_file = request.files['file']
+    
+    if uploaded_file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    if not uploaded_file.filename.endswith('.csv'):
+        return jsonify({"error": "File must be a CSV file"}), 400
+    
+    try:
+        message = trackAppleWatchData(uploaded_file)
+        return jsonify({"message": message})
+    except Exception as e:
+        return jsonify({"error": f"Failed to process file. Error: {str(e)}"}), 500
 
 @app.route("/nextseizure", methods=["GET"])
 def getnextseizure():
