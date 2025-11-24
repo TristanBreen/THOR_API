@@ -49,7 +49,7 @@ def load_pain_data():
         df = df.dropna(subset=['timestamp'])
         
         # Sort by timestamp
-        df = df.sort_values('timestamp', ascending=True)
+        df = df.sort_values('timestamp', ascending=True)#
         
         # Select only the columns we need
         df = df[['timestamp', 'Pain']]
