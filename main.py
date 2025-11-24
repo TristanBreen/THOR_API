@@ -7,6 +7,7 @@ import requests
 import random
 import google.generativeai as genai
 from flask import Flask, request, jsonify
+from io import StringIO
 
 # Try to import config, but make it optional for startup
 try:
@@ -271,24 +272,90 @@ def trackpain():
 
     return jsonify({"message": message})
 
-@app.route("/applewatch", methods=["POST"])
-def trackapplewatch():
-    if 'file' not in request.files:
-        return jsonify({"error": "Please provide a CSV file in the 'file' field"}), 400
+def append_csv_data(csv_content):
+    """
+    Appends CSV data to appleWatchData.csv
     
-    uploaded_file = request.files['file']
-    
-    if uploaded_file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-    
-    if not uploaded_file.filename.endswith('.csv'):
-        return jsonify({"error": "File must be a CSV file"}), 400
-    
+    Args:
+        csv_content (str): Raw CSV content as string
+        
+    Returns:
+        dict: Result with success status and message
+    """
     try:
-        message = trackAppleWatchData(uploaded_file)
-        return jsonify({"message": message})
+        # Parse the CSV content
+        csv_file = StringIO(csv_content)
+        reader = csv.reader(csv_file)
+        rows = list(reader)
+        
+        if not rows:
+            return {"success": False, "message": "CSV file is empty"}
+        
+        # First row is the header
+        header_row = rows[0]
+        data_rows = rows[1:]
+        
+        if not data_rows:
+            return {"success": False, "message": "No data rows found (only header)"}
+        
+        # Check if target file exists
+        file_exists = os.path.exists(APPLE_WATCH_FILE)
+        
+        # If file doesn't exist, create it with the header
+        if not file_exists:
+            with open(APPLE_WATCH_FILE, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(header_row)
+        
+        # Append data rows
+        with open(APPLE_WATCH_FILE, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerows(data_rows)
+        
+        rows_appended = len(data_rows)
+        print(f"[LOG] Appended {rows_appended} rows to {APPLE_WATCH_FILE}")
+        
+        return {
+            "success": True,
+            "message": f"Successfully appended {rows_appended} rows",
+            "rows_appended": rows_appended
+        }
+        
     except Exception as e:
-        return jsonify({"error": f"Failed to process file. Error: {str(e)}"}), 500
+        print(f"[ERROR] Failed to process CSV: {str(e)}")
+        return {"success": False, "message": f"Error processing CSV: {str(e)}"}
+
+
+@app.route("/applewatch", methods=["POST"])
+def track_apple_watch():
+    """
+    Endpoint to receive Apple Watch health data CSV from iOS Shortcuts
+    Accepts raw CSV content in request body
+    """
+    try:
+        # Get raw body content
+        csv_content = request.get_data(as_text=True)
+        
+        if not csv_content or not csv_content.strip():
+            return jsonify({
+                "success": False,
+                "error": "Request body is empty. Please send CSV content in the request body."
+            }), 400
+        
+        # Process the CSV data
+        result = append_csv_data(csv_content)
+        
+        if result["success"]:
+            return jsonify(result), 200
+        else:
+            return jsonify({"success": False, "error": result["message"]}), 400
+            
+    except Exception as e:
+        print(f"[ERROR] Endpoint error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        }), 500
 
 @app.route("/nextseizure", methods=["GET"])
 def getnextseizure():
