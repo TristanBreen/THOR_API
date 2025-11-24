@@ -2,6 +2,7 @@
 
 import os
 import csv
+import base64
 from datetime import datetime, date
 import requests
 import random
@@ -176,12 +177,12 @@ def trackPain(pain):
     print(f"[LOG] Pain logged to {PAIN_FILE}")
     return f"Pain has been logged"
 
-def trackAppleWatchData(uploaded_file):
+def trackAppleWatchDataFromContent(file_content):
     """
-    Appends data from uploaded Apple Watch CSV export to appleWatchData.csv
+    Appends CSV data content to appleWatchData.csv
     
     Args:
-        uploaded_file: Flask file upload object containing the CSV file
+        file_content: CSV file content as string
         
     Returns:
         str: Success message with number of rows appended
@@ -189,8 +190,7 @@ def trackAppleWatchData(uploaded_file):
     # Ensure directory exists (already created at startup, but double-check)
     os.makedirs(BASE_DATA_DIR, exist_ok=True)
     
-    # Read the uploaded CSV file content
-    file_content = uploaded_file.read().decode('utf-8')
+    # Parse CSV content
     uploaded_csv = csv.reader(file_content.splitlines())
     rows = list(uploaded_csv)
     
@@ -220,6 +220,20 @@ def trackAppleWatchData(uploaded_file):
     
     print(f"[LOG] Apple Watch data logged to {APPLE_WATCH_FILE} - {rows_appended} rows appended")
     return f"Apple Watch data has been logged - {rows_appended} rows appended"
+
+def trackAppleWatchData(uploaded_file):
+    """
+    Appends data from uploaded Apple Watch CSV export to appleWatchData.csv
+    
+    Args:
+        uploaded_file: Flask file upload object containing the CSV file
+        
+    Returns:
+        str: Success message with number of rows appended
+    """
+    # Read the uploaded CSV file content
+    file_content = uploaded_file.read().decode('utf-8')
+    return trackAppleWatchDataFromContent(file_content)
 
 def main(lat, lon):
     return concatMessages(lat, lon)
@@ -273,22 +287,43 @@ def trackpain():
 
 @app.route("/applewatch", methods=["POST"])
 def trackapplewatch():
-    if 'file' not in request.files:
-        return jsonify({"error": "Please provide a CSV file in the 'file' field"}), 400
+    # Check if this is a JSON request with base64 data (for Shortcuts app)
+    if request.is_json:
+        data = request.get_json()
+        if 'file_data' in data:
+            try:
+                # Decode base64 file content
+                file_content_b64 = data['file_data']
+                file_content = base64.b64decode(file_content_b64).decode('utf-8')
+                message = trackAppleWatchDataFromContent(file_content)
+                return jsonify({"message": message})
+            except Exception as e:
+                return jsonify({"error": f"Failed to process base64 file data. Error: {str(e)}"}), 500
+        elif 'file_content' in data:
+            # Direct CSV content as string (alternative for Shortcuts)
+            try:
+                message = trackAppleWatchDataFromContent(data['file_content'])
+                return jsonify({"message": message})
+            except Exception as e:
+                return jsonify({"error": f"Failed to process file content. Error: {str(e)}"}), 500
     
-    uploaded_file = request.files['file']
+    # Check if this is a multipart/form-data request (traditional file upload)
+    if 'file' in request.files:
+        uploaded_file = request.files['file']
+        
+        if uploaded_file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if not uploaded_file.filename.endswith('.csv'):
+            return jsonify({"error": "File must be a CSV file"}), 400
+        
+        try:
+            message = trackAppleWatchData(uploaded_file)
+            return jsonify({"message": message})
+        except Exception as e:
+            return jsonify({"error": f"Failed to process file. Error: {str(e)}"}), 500
     
-    if uploaded_file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-    
-    if not uploaded_file.filename.endswith('.csv'):
-        return jsonify({"error": "File must be a CSV file"}), 400
-    
-    try:
-        message = trackAppleWatchData(uploaded_file)
-        return jsonify({"message": message})
-    except Exception as e:
-        return jsonify({"error": f"Failed to process file. Error: {str(e)}"}), 500
+    return jsonify({"error": "Please provide file data. Use 'file' for multipart upload, 'file_data' for base64, or 'file_content' for raw CSV text."}), 400
 
 @app.route("/nextseizure", methods=["GET"])
 def getnextseizure():
