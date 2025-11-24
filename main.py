@@ -6,15 +6,41 @@ from datetime import datetime, date
 import requests
 import random
 import google.generativeai as genai
-from config import GEMINI_API_KEY
 from flask import Flask, request, jsonify
-from emailSeizureLogs import send_seizure_email
+
+# Try to import config, but make it optional for startup
+try:
+    from config import GEMINI_API_KEY
+except ImportError:
+    print("Warning: config.py not found. GEMINI_API_KEY will need to be set via environment variable.")
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+try:
+    from emailSeizureLogs import send_seizure_email
+except ImportError:
+    print("Warning: emailSeizureLogs.py not found. Email functionality will be disabled.")
+    def send_seizure_email(file_path):
+        print(f"Email disabled - would have sent file: {file_path}")
 
 app = Flask(__name__)
 
+# Resolve CSV file paths: check server absolute path first, then local Data folder
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-SEIZURE_FILE = os.path.join(APP_DIR, "seizures.csv")
-PAIN_FILE = os.path.join(APP_DIR, "pain.csv")
+
+# Determine which base path to use
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
+    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
+else:
+    BASE_DATA_DIR = os.path.join(APP_DIR, "Data")
+
+# Ensure Data directory exists
+os.makedirs(BASE_DATA_DIR, exist_ok=True)
+
+# Set file paths
+SEIZURE_FILE = os.path.join(BASE_DATA_DIR, "seizures.csv")
+PAIN_FILE = os.path.join(BASE_DATA_DIR, "pain.csv")
+APPLE_WATCH_FILE = os.path.join(BASE_DATA_DIR, "appleWatchData.csv")
 
 def getGoodMorningString():
     messages = [
@@ -113,8 +139,8 @@ def trackSeizure(duration, period, eaten, foodEaten = ""):
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(SEIZURE_FILE), exist_ok=True)
+    # Ensure directory exists (already created at startup, but double-check)
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
     
     # Create file with headers if it doesn't exist
     if not os.path.exists(SEIZURE_FILE):
@@ -134,8 +160,8 @@ def trackPain(pain):
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(PAIN_FILE), exist_ok=True)
+    # Ensure directory exists (already created at startup, but double-check)
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
     
     # Create file with headers if it doesn't exist
     if not os.path.exists(PAIN_FILE):
@@ -149,6 +175,51 @@ def trackPain(pain):
 
     print(f"[LOG] Pain logged to {PAIN_FILE}")
     return f"Pain has been logged"
+
+def trackAppleWatchData(uploaded_file):
+    """
+    Appends data from uploaded Apple Watch CSV export to appleWatchData.csv
+    
+    Args:
+        uploaded_file: Flask file upload object containing the CSV file
+        
+    Returns:
+        str: Success message with number of rows appended
+    """
+    # Ensure directory exists (already created at startup, but double-check)
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
+    
+    # Read the uploaded CSV file content
+    file_content = uploaded_file.read().decode('utf-8')
+    uploaded_csv = csv.reader(file_content.splitlines())
+    rows = list(uploaded_csv)
+    
+    if not rows:
+        return "Error: Uploaded file is empty"
+    
+    # Get header row from uploaded file
+    header_row = rows[0]
+    
+    # Check if appleWatchData.csv exists, create with header if not
+    file_exists = os.path.exists(APPLE_WATCH_FILE)
+    
+    if not file_exists:
+        with open(APPLE_WATCH_FILE, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header_row)
+    
+    # Append data rows (skip header row from uploaded file)
+    data_rows = rows[1:]
+    rows_appended = 0
+    
+    with open(APPLE_WATCH_FILE, 'a', newline='') as file:
+        writer = csv.writer(file)
+        for row in data_rows:
+            writer.writerow(row)
+            rows_appended += 1
+    
+    print(f"[LOG] Apple Watch data logged to {APPLE_WATCH_FILE} - {rows_appended} rows appended")
+    return f"Apple Watch data has been logged - {rows_appended} rows appended"
 
 def main(lat, lon):
     return concatMessages(lat, lon)
@@ -199,6 +270,25 @@ def trackpain():
     message = trackPain(pain)
 
     return jsonify({"message": message})
+
+@app.route("/applewatch", methods=["POST"])
+def trackapplewatch():
+    if 'file' not in request.files:
+        return jsonify({"error": "Please provide a CSV file in the 'file' field"}), 400
+    
+    uploaded_file = request.files['file']
+    
+    if uploaded_file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    if not uploaded_file.filename.endswith('.csv'):
+        return jsonify({"error": "File must be a CSV file"}), 400
+    
+    try:
+        message = trackAppleWatchData(uploaded_file)
+        return jsonify({"message": message})
+    except Exception as e:
+        return jsonify({"error": f"Failed to process file. Error: {str(e)}"}), 500
 
 @app.route("/nextseizure", methods=["GET"])
 def getnextseizure():

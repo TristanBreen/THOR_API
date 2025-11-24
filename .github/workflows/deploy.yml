@@ -30,22 +30,47 @@ jobs:
 
           TIMESTAMP="$(date -u +%Y%m%d%H%M%S)"
 
-          # Backup files safely using printf to avoid embedded-quote issues
-          for FILE in pain.csv seizures.csv; do
-            if [ -f "$FILE" ]; then
+          # Backup CSV files from Data/ folder safely using printf to avoid embedded-quote issues
+          DATA_DIR="$REPO/Data"
+          mkdir -p "$DATA_DIR"
+          
+          for FILE in pain.csv seizures.csv appleWatchData.csv; do
+            if [ -f "$DATA_DIR/$FILE" ]; then
               TARGET="$BACKUP_DIR/${FILE%.csv}_$TIMESTAMP.csv"
-              printf "Backing up %s -> %s\n" "$FILE" "$TARGET"
-              cp -- "$FILE" "$TARGET"
+              printf "Backing up %s -> %s\n" "$DATA_DIR/$FILE" "$TARGET"
+              cp -- "$DATA_DIR/$FILE" "$TARGET"
             fi
           done
 
-          # Make git ignore local modifications to these generated files
-          git update-index --assume-unchanged pain.csv || true
-          git update-index --assume-unchanged seizures.csv || true
+          # Store backup location for restoration
+          BACKUP_TIMESTAMP="$TIMESTAMP"
 
-          # Stash other local changes (if any)
-          if [ -n "$(git status --porcelain)" ]; then
-            printf "Local changes detected (excluding ignored files) — stashing\n"
+          # Remove any existing assume-unchanged settings that might conflict
+          git update-index --no-assume-unchanged Data/pain.csv Data/seizures.csv Data/appleWatchData.csv 2>/dev/null || true
+
+          # Temporarily move Data folder outside repo to avoid git conflicts
+          TEMP_BACKUP="/tmp/thor_data_backup_$TIMESTAMP"
+          if [ -d "$DATA_DIR" ] && [ "$(ls -A "$DATA_DIR" 2>/dev/null)" ]; then
+            printf "Temporarily moving Data folder out of repo\n"
+            mkdir -p "$TEMP_BACKUP"
+            mv "$DATA_DIR"/* "$TEMP_BACKUP/" 2>/dev/null || cp -r "$DATA_DIR"/* "$TEMP_BACKUP/" 2>/dev/null || true
+          fi
+
+          # Remove old CSV files from root if they still exist (legacy cleanup)
+          for OLD_FILE in pain.csv seizures.csv; do
+            if [ -f "$REPO/$OLD_FILE" ]; then
+              printf "Removing legacy file: %s\n" "$OLD_FILE"
+              rm -f "$REPO/$OLD_FILE"
+            fi
+          done
+
+          # Remove any assume-unchanged flags on old root files
+          git update-index --no-assume-unchanged pain.csv seizures.csv 2>/dev/null || true
+
+          # Stash all local changes (Data/ folder is already backed up and moved)
+          GIT_STATUS=$(git status --porcelain 2>/dev/null | grep -v "^?? Data/" || true)
+          if [ -n "$GIT_STATUS" ]; then
+            printf "Local changes detected — stashing\n"
             git stash push -u -m "autodeploy-$TIMESTAMP" || true
             STASHED=1
           else
@@ -54,11 +79,26 @@ jobs:
 
           # Ensure working tree matches remote main
           git fetch origin main
-          git reset --hard origin/main
-          git clean -fd
-
+          
+          # Reset with force to overwrite any local modifications
+          git reset --hard origin/main || {
+            printf "Warning: git reset failed, trying alternative approach\n"
+            # Force remove any problematic files
+            git clean -fdx || true
+            git reset --hard origin/main || true
+          }
+          
+          git clean -fd || true
           git checkout main || true
           git pull origin main || true
+
+          # Restore Data folder from temp backup
+          if [ -d "$TEMP_BACKUP" ] && [ "$(ls -A "$TEMP_BACKUP" 2>/dev/null)" ]; then
+            printf "Restoring Data folder from backup\n"
+            mkdir -p "$DATA_DIR"
+            cp -r "$TEMP_BACKUP"/* "$DATA_DIR/" 2>/dev/null || true
+            rm -rf "$TEMP_BACKUP"
+          fi
 
           # Rebuild only the services we want (faster / less disruptive)
           cd "$DOCKER_DIR"

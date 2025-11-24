@@ -5,8 +5,35 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-SEIZURES_CSV = '/data/seizures.csv' if os.path.exists('/data/seizures.csv') else 'seizures.csv'
-PAIN_CSV = '/data/pain.csv' if os.path.exists('/data/pain.csv') else 'pain.csv'
+
+# Resolve CSV file paths: check server absolute path first, then Docker mount, then local Data folder
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+
+# Determine which base path to use (check in priority order)
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
+    # Server absolute path
+    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
+elif os.path.exists('/data/Data'):
+    # Docker mount path (THOR_API mounted to /data, so Data is at /data/Data)
+    BASE_DATA_DIR = '/data/Data'
+elif os.path.exists(os.path.join(PARENT_DIR, "Data")):
+    # Local relative path
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+else:
+    # Fallback: use local path and create directory if needed
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
+
+# Set CSV file paths
+SEIZURES_CSV = os.path.join(BASE_DATA_DIR, "seizures.csv")
+PAIN_CSV = os.path.join(BASE_DATA_DIR, "pain.csv")
+
+# Debug: Print which path is being used
+print(f"[WEBPAGE] Using BASE_DATA_DIR: {BASE_DATA_DIR}")
+print(f"[WEBPAGE] SEIZURES_CSV: {SEIZURES_CSV} (exists: {os.path.exists(SEIZURES_CSV)})")
+print(f"[WEBPAGE] PAIN_CSV: {PAIN_CSV} (exists: {os.path.exists(PAIN_CSV)})")
 
 def load_pain_data():
     """Load and process pain data from CSV file"""
@@ -22,7 +49,7 @@ def load_pain_data():
         df = df.dropna(subset=['timestamp'])
         
         # Sort by timestamp
-        df = df.sort_values('timestamp', ascending=True)
+        df = df.sort_values('timestamp', ascending=True)#
         
         # Select only the columns we need
         df = df[['timestamp', 'Pain']]
