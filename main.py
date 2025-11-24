@@ -6,9 +6,21 @@ from datetime import datetime, date
 import requests
 import random
 import google.generativeai as genai
-from config import GEMINI_API_KEY
 from flask import Flask, request, jsonify
-from emailSeizureLogs import send_seizure_email
+
+# Try to import config, but make it optional for startup
+try:
+    from config import GEMINI_API_KEY
+except ImportError:
+    print("Warning: config.py not found. GEMINI_API_KEY will need to be set via environment variable.")
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+try:
+    from emailSeizureLogs import send_seizure_email
+except ImportError:
+    print("Warning: emailSeizureLogs.py not found. Email functionality will be disabled.")
+    def send_seizure_email(file_path):
+        print(f"Email disabled - would have sent file: {file_path}")
 
 app = Flask(__name__)
 
@@ -16,21 +28,19 @@ app = Flask(__name__)
 SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Check for server path first
-if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")):
-    SEIZURE_FILE = os.path.join(SERVER_BASE_PATH, "Data", "seizures.csv")
+# Determine which base path to use
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
+    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
 else:
-    SEIZURE_FILE = os.path.join(APP_DIR, "Data", "seizures.csv")
+    BASE_DATA_DIR = os.path.join(APP_DIR, "Data")
 
-if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")):
-    PAIN_FILE = os.path.join(SERVER_BASE_PATH, "Data", "pain.csv")
-else:
-    PAIN_FILE = os.path.join(APP_DIR, "Data", "pain.csv")
+# Ensure Data directory exists
+os.makedirs(BASE_DATA_DIR, exist_ok=True)
 
-if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data", "appleWatchData.csv")):
-    APPLE_WATCH_FILE = os.path.join(SERVER_BASE_PATH, "Data", "appleWatchData.csv")
-else:
-    APPLE_WATCH_FILE = os.path.join(APP_DIR, "Data", "appleWatchData.csv")
+# Set file paths
+SEIZURE_FILE = os.path.join(BASE_DATA_DIR, "seizures.csv")
+PAIN_FILE = os.path.join(BASE_DATA_DIR, "pain.csv")
+APPLE_WATCH_FILE = os.path.join(BASE_DATA_DIR, "appleWatchData.csv")
 
 def getGoodMorningString():
     messages = [
@@ -129,8 +139,8 @@ def trackSeizure(duration, period, eaten, foodEaten = ""):
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(SEIZURE_FILE), exist_ok=True)
+    # Ensure directory exists (already created at startup, but double-check)
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
     
     # Create file with headers if it doesn't exist
     if not os.path.exists(SEIZURE_FILE):
@@ -150,8 +160,8 @@ def trackPain(pain):
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(PAIN_FILE), exist_ok=True)
+    # Ensure directory exists (already created at startup, but double-check)
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
     
     # Create file with headers if it doesn't exist
     if not os.path.exists(PAIN_FILE):
@@ -176,8 +186,8 @@ def trackAppleWatchData(uploaded_file):
     Returns:
         str: Success message with number of rows appended
     """
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(APPLE_WATCH_FILE), exist_ok=True)
+    # Ensure directory exists (already created at startup, but double-check)
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
     
     # Read the uploaded CSV file content
     file_content = uploaded_file.read().decode('utf-8')
