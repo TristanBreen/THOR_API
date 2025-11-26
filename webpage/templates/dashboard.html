@@ -46,6 +46,11 @@
         .loading { text-align:center; color:#6d7d75; padding:40px; }
         .error { background:#a06858; color:#f5f1e8; padding:20px; border-radius:12px; margin-bottom:30px; }
         .stat-card.alert { border-left-color:#c1566c; background: linear-gradient(135deg,#faf6f1 0%,#f5ede4 100%); }
+        .health-insight { background: linear-gradient(135deg,#e8f5e9 0%,#c8e6c9 100%); border-left-color:#4a7c59; }
+        .health-insight .stat-value { color:#2d5a3d; }
+        .correlation-positive { color:#4a7c59; font-weight:700; }
+        .correlation-negative { color:#c1566c; font-weight:700; }
+        .correlation-neutral { color:#8b7355; font-weight:700; }
         .stat-value.alert { color:#c1566c; }
         .btn { background: linear-gradient(135deg,#2d5a3d 0%,#1a4d2e 100%); color:#f5f1e8; padding:12px 24px; border:2px solid #1a4d2e; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all .3s; text-decoration:none; display:inline-block; font-family:'Georgia', serif; }
         .btn:hover { background: linear-gradient(135deg,#1a4d2e 0%,#0d3620 100%); transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
@@ -80,6 +85,14 @@
             <div class="loading">Loading insights...</div>
         </div>
 
+        <div class="grid" id="healthStatsGrid">
+            <div class="loading">Loading health data...</div>
+        </div>
+
+        <div class="insights-section" id="healthInsightsSection">
+            <div class="loading">Loading health insights...</div>
+        </div>
+        
         <div class="two-column">
             <div class="chart-container">
                 <div class="chart-title">Seizure Risk Heatmap (Hour x Day of Week)</div>
@@ -141,6 +154,43 @@
             </div>
         </div>
 
+        <div class="chart-container">
+            <div class="chart-title">Sleep Metrics (3 Days Before Seizures vs Baseline)</div>
+            <div class="chart-wrapper">
+                <canvas id="sleepComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="two-column">
+            <div class="chart-container">
+                <div class="chart-title">Resting Heart Rate Trend with Seizure Markers</div>
+                <div class="chart-wrapper">
+                    <canvas id="hrTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Activity Level (Walking Distance) Timeline</div>
+                <div class="chart-wrapper">
+                    <canvas id="activityTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="two-column">
+            <div class="chart-container">
+                <div class="chart-title">Sleep Debt Accumulation (3-Day & 7-Day)</div>
+                <div class="chart-wrapper">
+                    <canvas id="sleepDebtChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Sleep Stage Ratios (%)</div>
+                <div class="chart-wrapper">
+                    <canvas id="sleepRatiosChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <div class="data-table">
             <div class="data-table-title">Recent Seizure Records</div>
             <div class="table-controls">
@@ -196,6 +246,17 @@
                 renderCharts(data.charts);
                 renderPainChart(data.pain_charts);
                 renderTable(data.charts.timeline);
+                
+                // Only render health data if functions exist and data is available
+                if (typeof renderHealthStats === 'function' && data.health_insights) {
+                    renderHealthStats(data.health_insights);
+                }
+                if (typeof renderHealthInsights === 'function' && data.health_insights) {
+                    renderHealthInsights(data.health_insights);
+                }
+                if (typeof renderHealthCharts === 'function' && data.health_charts) {
+                    renderHealthCharts(data.health_charts);
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.getElementById('statsGrid').innerHTML = '<div class="error">Failed to load seizure data</div>';
@@ -217,98 +278,540 @@
         }
 
         function renderInsights(data) {
-            const stats = data.statistics;
-            const charts = data.charts;
             const section = document.getElementById('insightsSection');
-
-            if (!stats || Object.keys(stats).length === 0) {
-                section.innerHTML = '<div class="error">No insights available</div>';
+            if (!data || !data.charts || !data.charts.timeline) {
+                section.innerHTML = '<div class="insights-title">📊 Seizure Insights</div><div class="insight-item"><div class="insight-content"><p>No insights available</p></div></div>';
                 return;
             }
 
-            // Find most common hour
-            let mostCommonHour = 12;
-            let maxCount = 0;
-            charts.hour_frequency.forEach(item => {
-                if (item.count > maxCount) {
-                    maxCount = item.count;
-                    mostCommonHour = item.hour;
-                }
-            });
-            
-            // Convert to 12-hour format
-            const period = mostCommonHour >= 12 ? 'PM' : 'AM';
-            const displayHour = mostCommonHour % 12 === 0 ? 12 : mostCommonHour % 12;
-            const timeOfDay = mostCommonHour < 12 ? 'morning' : mostCommonHour < 17 ? 'afternoon' : 'evening';
+            const stats = data.statistics || {};
+            let insights = '<div class="insights-title">📊 Seizure Insights</div>';
 
-            // Find most common day
-            let mostCommonDay = 'Monday';
-            maxCount = 0;
-            charts.day_frequency.forEach(item => {
-                if (item.count > maxCount) {
-                    maxCount = item.count;
-                    mostCommonDay = item.day;
-                }
-            });
+            if (stats.period_related_count > 0) {
+                const periodRatio = (stats.period_related_count / stats.total_seizures * 100).toFixed(1);
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">🩸</div>
+                        <div class="insight-content">
+                            <h3>Period Correlation</h3>
+                            <p>${periodRatio}% of seizures occurred during menstrual cycle</p>
+                        </div>
+                    </div>
+                `;
+            }
 
-            const foodAvg = charts.food_analysis.food_eaten_avg;
-            const noFoodAvg = charts.food_analysis.no_food_avg;
-            const foodDifference = foodAvg - noFoodAvg;
-            const foodImpact = foodDifference > 10 ? 'longer' : foodDifference < -10 ? 'shorter' : 'similar';
+            if (stats.food_eaten_count > 0) {
+                const foodRatio = (stats.food_eaten_count / stats.total_seizures * 100).toFixed(1);
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">🍽️</div>
+                        <div class="insight-content">
+                            <h3>Food Intake Pattern</h3>
+                            <p>${foodRatio}% of seizures occurred after eating</p>
+                        </div>
+                    </div>
+                `;
+            }
 
-            const insights = `
-                <div class="insights-title">💚 Key Insights</div>
-                
-                <div class="insight-item">
-                    <div class="insight-icon">⏰</div>
-                    <div class="insight-content">
-                        <h3>Peak Time Pattern</h3>
-                        <p>Most seizures occur around ${displayHour}:00 ${period} (${timeOfDay})</p>
+            if (data.charts.duration_stats) {
+                const durStats = data.charts.duration_stats;
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">⏱️</div>
+                        <div class="insight-content">
+                            <h3>Duration Patterns</h3>
+                            <p>Average duration: ${durStats.mean}s | Range: ${durStats.min}s - ${durStats.max}s</p>
+                        </div>
                     </div>
-                </div>
-
-                <div class="insight-item">
-                    <div class="insight-icon">📆</div>
-                    <div class="insight-content">
-                        <h3>Weekly Pattern</h3>
-                        <p>${mostCommonDay} has the most recorded seizures</p>
-                    </div>
-                </div>
-
-                <div class="insight-item">
-                    <div class="insight-icon">🍽️</div>
-                    <div class="insight-content">
-                        <h3>Food Correlation</h3>
-                        <p>Seizures with food are ${foodImpact === 'longer' ? `${Math.abs(foodDifference).toFixed(1)}s longer` : foodImpact === 'shorter' ? `${Math.abs(foodDifference).toFixed(1)}s shorter` : 'similar in duration'}</p>
-                    </div>
-                </div>
-
-                <div class="insight-item">
-                    <div class="insight-icon">📊</div>
-                    <div class="insight-content">
-                        <h3>Tracking Summary</h3>
-                        <p>${stats.date_range_days} days of data tracked with ${stats.total_seizures} recorded seizures</p>
-                    </div>
-                </div>
-                
-                <div class="insight-item">
-                    <div class="insight-icon">🔴</div>
-                    <div class="insight-content">
-                        <h3>Period Tracking</h3>
-                        <p>${stats.period_related_count || 0} seizures recorded during period, ${stats.non_period_count || 0} outside period</p>
-                    </div>
-                </div>
-                
-                <div class="insight-item">
-                    <div class="insight-icon">💪</div>
-                    <div class="insight-content">
-                        <h3>Duration & Period</h3>
-                        <p>Seizures during period: avg ${stats.period_avg_duration?.toFixed(1) || 0}s vs outside period: avg ${stats.non_period_avg_duration?.toFixed(1) || 0}s</p>
-                    </div>
-                </div>
-            `;
+                `;
+            }
 
             section.innerHTML = insights;
+        }
+
+        function renderHealthStats(healthInsights) {
+            const grid = document.getElementById('healthStatsGrid');
+            if (!healthInsights || Object.keys(healthInsights).length === 0) {
+                grid.innerHTML = '<div class="stat-card"><div class="stat-subtitle">No Apple Watch data available yet</div></div>';
+                return;
+            }
+
+            const sleep = healthInsights.sleep_analysis || {};
+            const hr = healthInsights.heart_rate_analysis || {};
+            const activity = healthInsights.activity_analysis || {};
+
+            let html = '';
+
+            // Sleep before seizures
+            if (sleep.before_seizure_avg_total !== undefined) {
+                const sleepDiff = sleep.baseline_avg_total ? (sleep.before_seizure_avg_total - sleep.baseline_avg_total).toFixed(1) : 0;
+                const sleepClass = sleepDiff < -0.5 ? 'alert' : '';
+                html += `
+                    <div class="stat-card health-insight ${sleepClass}">
+                        <div class="stat-label">Sleep Before Seizures</div>
+                        <div class="stat-value">${sleep.before_seizure_avg_total.toFixed(1)}h</div>
+                        <div class="stat-subtitle">Baseline: ${sleep.baseline_avg_total ? sleep.baseline_avg_total.toFixed(1) : 'N/A'}h (${sleepDiff > 0 ? '+' : ''}${sleepDiff}h)</div>
+                    </div>`;
+            }
+
+            // Deep sleep comparison
+            if (sleep.before_seizure_avg_deep !== undefined) {
+                const deepDiff = sleep.baseline_avg_deep ? (sleep.before_seizure_avg_deep - sleep.baseline_avg_deep).toFixed(1) : 0;
+                html += `
+                    <div class="stat-card health-insight">
+                        <div class="stat-label">Deep Sleep Before Seizures</div>
+                        <div class="stat-value">${sleep.before_seizure_avg_deep.toFixed(1)}h</div>
+                        <div class="stat-subtitle">Baseline: ${sleep.baseline_avg_deep ? sleep.baseline_avg_deep.toFixed(1) : 'N/A'}h (${deepDiff > 0 ? '+' : ''}${deepDiff}h)</div>
+                    </div>`;
+            }
+
+            // REM sleep comparison
+            if (sleep.before_seizure_avg_rem !== undefined) {
+                const remDiff = sleep.baseline_avg_rem ? (sleep.before_seizure_avg_rem - sleep.baseline_avg_rem).toFixed(1) : 0;
+                html += `
+                    <div class="stat-card health-insight">
+                        <div class="stat-label">REM Sleep Before Seizures</div>
+                        <div class="stat-value">${sleep.before_seizure_avg_rem.toFixed(1)}h</div>
+                        <div class="stat-subtitle">Baseline: ${sleep.baseline_avg_rem ? sleep.baseline_avg_rem.toFixed(1) : 'N/A'}h (${remDiff > 0 ? '+' : ''}${remDiff}h)</div>
+                    </div>`;
+            }
+
+            // Resting heart rate on seizure days
+            if (hr.seizure_day_min_hr !== undefined) {
+                const hrDiff = hr.baseline_min_hr ? (hr.seizure_day_min_hr - hr.baseline_min_hr).toFixed(0) : 0;
+                const hrClass = hrDiff > 5 ? 'alert' : '';
+                html += `
+                    <div class="stat-card health-insight ${hrClass}">
+                        <div class="stat-label">Resting HR (Seizure Days)</div>
+                        <div class="stat-value">${hr.seizure_day_min_hr.toFixed(0)} bpm</div>
+                        <div class="stat-subtitle">Baseline: ${hr.baseline_min_hr ? hr.baseline_min_hr.toFixed(0) : 'N/A'} bpm (${hrDiff > 0 ? '+' : ''}${hrDiff})</div>
+                    </div>`;
+            }
+
+            // Activity before seizures
+            if (activity.before_seizure_avg_distance !== undefined) {
+                const actDiff = activity.baseline_avg_distance ? (activity.before_seizure_avg_distance - activity.baseline_avg_distance).toFixed(2) : 0;
+                html += `
+                    <div class="stat-card health-insight">
+                        <div class="stat-label">Activity Before Seizures</div>
+                        <div class="stat-value">${activity.before_seizure_avg_distance.toFixed(2)} mi</div>
+                        <div class="stat-subtitle">Baseline: ${activity.baseline_avg_distance ? activity.baseline_avg_distance.toFixed(2) : 'N/A'} mi (${actDiff > 0 ? '+' : ''}${actDiff})</div>
+                    </div>`;
+            }
+
+            grid.innerHTML = html || '<div class="stat-card"><div class="stat-subtitle">Calculating health metrics...</div></div>';
+        }
+
+        function renderHealthInsights(healthInsights) {
+            const section = document.getElementById('healthInsightsSection');
+            if (!healthInsights || Object.keys(healthInsights).length === 0) {
+                section.innerHTML = '<div class="insights-title">🏥 Health Insights</div><div class="insight-item"><div class="insight-content"><p>No Apple Watch data available yet</p></div></div>';
+                return;
+            }
+
+            const sleep = healthInsights.sleep_analysis || {};
+            const hr = healthInsights.heart_rate_analysis || {};
+            const activity = healthInsights.activity_analysis || {};
+
+            let insights = '<div class="insights-title">🏥 Health & Wellness Insights</div>';
+
+            // Sleep quality insight
+            if (sleep.before_seizure_avg_total && sleep.baseline_avg_total) {
+                const sleepDiff = sleep.before_seizure_avg_total - sleep.baseline_avg_total;
+                const sleepImpact = sleepDiff < -0.5 ? 'significantly less' : sleepDiff < -0.2 ? 'slightly less' : 'similar';
+                const sleepClass = sleepDiff < -0.5 ? 'correlation-negative' : sleepDiff > 0.2 ? 'correlation-positive' : 'correlation-neutral';
+                
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">😴</div>
+                        <div class="insight-content">
+                            <h3>Sleep Quality Pattern</h3>
+                            <p>Sleep 1-3 days before seizures is <span class="${sleepClass}">${sleepImpact}</span> than baseline (${Math.abs(sleepDiff).toFixed(1)}h difference)</p>
+                        </div>
+                    </div>`;
+            }
+
+            // Deep sleep insight
+            if (sleep.before_seizure_avg_deep && sleep.baseline_avg_deep) {
+                const deepDiff = sleep.before_seizure_avg_deep - sleep.baseline_avg_deep;
+                const deepPercentChange = ((deepDiff / sleep.baseline_avg_deep) * 100).toFixed(0);
+                
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">🌙</div>
+                        <div class="insight-content">
+                            <h3>Deep Sleep Correlation</h3>
+                            <p>Deep sleep before seizures: ${sleep.before_seizure_avg_deep.toFixed(1)}h vs baseline ${sleep.baseline_avg_deep.toFixed(1)}h (${deepPercentChange > 0 ? '+' : ''}${deepPercentChange}%)</p>
+                        </div>
+                    </div>`;
+            }
+
+            // Heart rate insight
+            if (hr.seizure_day_min_hr && hr.baseline_min_hr) {
+                const hrDiff = hr.seizure_day_min_hr - hr.baseline_min_hr;
+                const hrStatus = hrDiff > 5 ? 'elevated' : hrDiff < -5 ? 'lower' : 'similar to';
+                const hrClass = hrDiff > 5 ? 'correlation-negative' : hrDiff < -5 ? 'correlation-positive' : 'correlation-neutral';
+                
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">❤️</div>
+                        <div class="insight-content">
+                            <h3>Resting Heart Rate Pattern</h3>
+                            <p>Resting HR on seizure days is <span class="${hrClass}">${hrStatus}</span> baseline (${hrDiff > 0 ? '+' : ''}${hrDiff.toFixed(0)} bpm)</p>
+                        </div>
+                    </div>`;
+            }
+
+            // Activity insight
+            if (activity.before_seizure_avg_distance !== undefined && activity.baseline_avg_distance) {
+                const actDiff = activity.before_seizure_avg_distance - activity.baseline_avg_distance;
+                const actStatus = actDiff > 0.5 ? 'higher' : actDiff < -0.5 ? 'lower' : 'similar to';
+                
+                insights += `
+                    <div class="insight-item">
+                        <div class="insight-icon">🚶</div>
+                        <div class="insight-content">
+                            <h3>Activity Level Correlation</h3>
+                            <p>Activity 1-2 days before seizures is ${actStatus} baseline (${actDiff > 0 ? '+' : ''}${actDiff.toFixed(2)} mi)</p>
+                        </div>
+                    </div>`;
+            }
+
+            section.innerHTML = insights;
+        }
+
+        function renderHealthCharts(healthCharts) {
+            if (!healthCharts || Object.keys(healthCharts).length === 0) return;
+
+            // Sleep comparison chart
+            const sleepCompCtx = document.getElementById('sleepComparisonChart').getContext('2d');
+            if (charts.sleepComparison) charts.sleepComparison.destroy();
+            
+            // This would need data restructured - showing timeline instead
+            if (healthCharts.sleep_timeline && healthCharts.sleep_timeline.length > 0) {
+                const sleepData = healthCharts.sleep_timeline;
+                const seizureMarkers = healthCharts.seizure_markers || [];
+                
+                charts.sleepComparison = new Chart(sleepCompCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sleepData.map(d => d.date_str),
+                        datasets: [
+                            {
+                                label: 'Total Sleep',
+                                data: sleepData.map(d => d.total_sleep),
+                                borderColor: '#2d5a3d',
+                                backgroundColor: 'rgba(45,90,61,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Deep Sleep',
+                                data: sleepData.map(d => d.deep_sleep),
+                                borderColor: '#4a7c59',
+                                backgroundColor: 'rgba(74,124,89,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'REM Sleep',
+                                data: sleepData.map(d => d.rem_sleep),
+                                borderColor: '#6fa86f',
+                                backgroundColor: 'rgba(111,168,111,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            annotation: {
+                                annotations: {}
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Hours' } },
+                            x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                        }
+                    },
+                    plugins: [{
+                        id: 'seizureLines',
+                        afterDatasetsDraw(chart) {
+                            const ctx = chart.ctx;
+                            const xScale = chart.scales.x;
+                            const yScale = chart.scales.y;
+                            
+                            sleepData.forEach((data, index) => {
+                                if (seizureMarkers.includes(data.date_str)) {
+                                    const x = xScale.getPixelForValue(index);
+                                    ctx.save();
+                                    ctx.strokeStyle = '#c1566c';
+                                    ctx.lineWidth = 3;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.beginPath();
+                                    ctx.moveTo(x, yScale.top);
+                                    ctx.lineTo(x, yScale.bottom);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+                            });
+                        }
+                    }]
+                });
+            }
+
+            // Heart rate trend chart
+            const hrTrendCtx = document.getElementById('hrTrendChart').getContext('2d');
+            if (charts.hrTrend) charts.hrTrend.destroy();
+            
+            if (healthCharts.hr_timeline && healthCharts.hr_timeline.length > 0) {
+                const hrData = healthCharts.hr_timeline;
+                const seizureMarkers = healthCharts.seizure_markers || [];
+                
+                // Create seizure marker points
+                const seizurePoints = hrData.map(d => 
+                    seizureMarkers.includes(d.date_str) ? d.avg_hr : null
+                );
+                
+                charts.hrTrend = new Chart(hrTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: hrData.map(d => d.date_str),
+                        datasets: [
+                            {
+                                label: 'Average HR',
+                                data: hrData.map(d => d.avg_hr),
+                                borderColor: '#2d5a3d',
+                                backgroundColor: 'rgba(45,90,61,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Seizure Days',
+                                data: seizurePoints,
+                                pointRadius: 8,
+                                pointBackgroundColor: '#c1566c',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                showLine: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: {
+                            y: { title: { display: true, text: 'Heart Rate (bpm)' } },
+                            x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                        }
+                    }
+                });
+            }
+
+            // Activity trend chart
+            const activityTrendCtx = document.getElementById('activityTrendChart').getContext('2d');
+            if (charts.activityTrend) charts.activityTrend.destroy();
+            
+            if (healthCharts.activity_timeline && healthCharts.activity_timeline.length > 0) {
+                const actData = healthCharts.activity_timeline;
+                const seizureMarkers = healthCharts.seizure_markers || [];
+                
+                const seizurePoints = actData.map(d => 
+                    seizureMarkers.includes(d.date_str) ? d.walking_distance : null
+                );
+                
+                charts.activityTrend = new Chart(activityTrendCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: actData.map(d => d.date_str),
+                        datasets: [
+                            {
+                                label: 'Walking Distance',
+                                data: actData.map(d => d.walking_distance),
+                                backgroundColor: '#4a7c59'
+                            },
+                            {
+                                label: 'Seizure Days',
+                                data: seizurePoints,
+                                type: 'scatter',
+                                pointRadius: 8,
+                                pointBackgroundColor: '#c1566c',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Miles' } },
+                            x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                        }
+                    }
+                });
+            }
+
+            // Sleep debt chart
+            const sleepDebtCtx = document.getElementById('sleepDebtChart').getContext('2d');
+            if (charts.sleepDebt) charts.sleepDebt.destroy();
+            
+            if (healthCharts.sleep_debt && healthCharts.sleep_debt.length > 0) {
+                const debtData = healthCharts.sleep_debt;
+                const seizureMarkers = healthCharts.seizure_markers || [];
+                
+                charts.sleepDebt = new Chart(sleepDebtCtx, {
+                    type: 'line',
+                    data: {
+                        labels: debtData.map(d => d.date),
+                        datasets: [
+                            {
+                                label: '3-Day Sleep Debt',
+                                data: debtData.map(d => d.cumulative_debt_3day),
+                                borderColor: '#c1566c',
+                                backgroundColor: 'rgba(193,86,108,0.1)',
+                                tension: 0.4,
+                                fill: true
+                            },
+                            {
+                                label: '7-Day Sleep Debt',
+                                data: debtData.map(d => d.cumulative_debt_7day),
+                                borderColor: '#8b7355',
+                                backgroundColor: 'rgba(139,115,85,0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: true, position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + 'h deficit';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { title: { display: true, text: 'Hours of Sleep Deficit' } },
+                            x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                        }
+                    },
+                    plugins: [{
+                        id: 'seizureLines',
+                        afterDatasetsDraw(chart) {
+                            const ctx = chart.ctx;
+                            const xScale = chart.scales.x;
+                            const yScale = chart.scales.y;
+                            
+                            debtData.forEach((data, index) => {
+                                if (seizureMarkers.includes(data.date)) {
+                                    const x = xScale.getPixelForValue(index);
+                                    ctx.save();
+                                    ctx.strokeStyle = '#c1566c';
+                                    ctx.lineWidth = 3;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.beginPath();
+                                    ctx.moveTo(x, yScale.top);
+                                    ctx.lineTo(x, yScale.bottom);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+                            });
+                        }
+                    }]
+                });
+            }
+
+            // Sleep ratios chart
+            const sleepRatiosCtx = document.getElementById('sleepRatiosChart').getContext('2d');
+            if (charts.sleepRatios) charts.sleepRatios.destroy();
+            
+            if (healthCharts.sleep_ratios && healthCharts.sleep_ratios.length > 0) {
+                const ratioData = healthCharts.sleep_ratios;
+                const seizureMarkers = healthCharts.seizure_markers || [];
+                
+                charts.sleepRatios = new Chart(sleepRatiosCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ratioData.map(d => d.date_str),
+                        datasets: [
+                            {
+                                label: 'Deep Sleep %',
+                                data: ratioData.map(d => d.deep_ratio),
+                                borderColor: '#2d5a3d',
+                                backgroundColor: 'rgba(45,90,61,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'REM Sleep %',
+                                data: ratioData.map(d => d.rem_ratio),
+                                borderColor: '#4a7c59',
+                                backgroundColor: 'rgba(74,124,89,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Core Sleep %',
+                                data: ratioData.map(d => d.core_ratio),
+                                borderColor: '#6fa86f',
+                                backgroundColor: 'rgba(111,168,111,0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: {
+                            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Percentage of Total Sleep' } },
+                            x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+                        }
+                    },
+                    plugins: [{
+                        id: 'seizureLines',
+                        afterDatasetsDraw(chart) {
+                            const ctx = chart.ctx;
+                            const xScale = chart.scales.x;
+                            const yScale = chart.scales.y;
+                            
+                            ratioData.forEach((data, index) => {
+                                if (seizureMarkers.includes(data.date_str)) {
+                                    const x = xScale.getPixelForValue(index);
+                                    ctx.save();
+                                    ctx.strokeStyle = '#c1566c';
+                                    ctx.lineWidth = 3;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.beginPath();
+                                    ctx.moveTo(x, yScale.top);
+                                    ctx.lineTo(x, yScale.bottom);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+                            });
+                        }
+                    }]
+                });
+            }
         }
 
 
