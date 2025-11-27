@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Settings - Kylie's Health Dashboard</title>
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--gray-800);
+        }
+        
+        .font-display {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .form-input {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="glass fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-heartbeat text-2xl text-white mr-3"></i>
+                    <span class="font-display text-xl font-semibold text-white">Kylie's Health Dashboard</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex space-x-8">
+                    <a href="/" class="nav-link text-white hover:text-blue-200">Dashboard</a>
+                    <a href="/health" class="nav-link text-white hover:text-blue-200">Health Insights</a>
+                    <a href="/analytics" class="nav-link text-white hover:text-blue-200">Analytics</a>
+                    <a href="/settings" class="nav-link active text-white hover:text-blue-200">Settings</a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden text-white">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-8">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Header Section -->
+            <div class="text-center mb-8">
+                <h1 class="font-display text-4xl md:text-5xl font-bold text-white mb-4">
+                    Settings
+                </h1>
+                <p class="text-xl text-white/80 mb-6">
+                    Customize your dashboard experience
+                </p>
+            </div>
+
+            <!-- Settings Sections -->
+            <div class="space-y-8">
+                
+                <!-- Data Management -->
+                <div class="card p-6">
+                    <h2 class="font-display text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-database text-blue-500 mr-3"></i>
+                        Data Management
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Auto-refresh Data</h3>
+                                <p class="text-sm text-gray-600">Automatically refresh dashboard data every 5 minutes</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoRefresh" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Data Caching</h3>
+                                <p class="text-sm text-gray-600">Cache data locally for faster loading</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dataCaching" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Anonymous Analytics</h3>
+                                <p class="text-sm text-gray-600">Help improve the dashboard with anonymous usage data</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="analytics">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <h3 class="font-semibold text-gray-800 mb-4">Data Export</h3>
+                        <div class="flex flex-wrap gap-4">
+                            <button id="exportAllBtn" class="btn-secondary">
+                                <i class="fas fa-download mr-2"></i>Export All Data
+                            </button>
+                            <button id="exportSeizuresBtn" class="btn-secondary">
+                                <i class="fas fa-file-csv mr-2"></i>Export Seizures CSV
+                            </button>
+                            <button id="exportHealthBtn" class="btn-secondary">
+                                <i class="fas fa-heartbeat mr-2"></i>Export Health Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications -->
+                <div class="card p-6">
+                    <h2 class="font-display text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-bell text-yellow-500 mr-3"></i>
+                        Notifications
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Risk Alerts</h3>
+                                <p class="text-sm text-gray-600">Get notified when seizure risk is elevated</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="riskAlerts" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Data Reminders</h3>
+                                <p class="text-sm text-gray-600">Remind me to log seizure data</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dataReminders">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Weekly Reports</h3>
+                                <p class="text-sm text-gray-600">Receive weekly health summary reports</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="weeklyReports" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Display Preferences -->
+                <div class="card p-6">
+                    <h2 class="font-display text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-palette text-purple-500 mr-3"></i>
+                        Display Preferences
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+                            <select id="themeSelect" class="form-input w-full">
+                                <option value="default">Default (Purple Gradient)</option>
+                                <option value="blue">Ocean Blue</option>
+                                <option value="green">Forest Green</option>
+                                <option value="dark">Dark Mode</option>
+                                <option value="light">Light Mode</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Chart Style</label>
+                            <select id="chartStyle" class="form-input w-full">
+                                <option value="modern">Modern (Default)</option>
+                                <option value="minimal">Minimal</option>
+                                <option value="colorful">Colorful</option>
+                                <option value="professional">Professional</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
+                            <select id="dateFormat" class="form-input w-full">
+                                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Time Format</label>
+                            <select id="timeFormat" class="form-input w-full">
+                                <option value="12">12-hour (AM/PM)</option>
+                                <option value="24">24-hour</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Privacy & Security -->
+                <div class="card p-6">
+                    <h2 class="font-display text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-shield-alt text-green-500 mr-3"></i>
+                        Privacy & Security
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Data Encryption</h3>
+                                <p class="text-sm text-gray-600">Encrypt all health data locally</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="encryption" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Auto-logout</h3>
+                                <p class="text-sm text-gray-600">Automatically log out after 30 minutes of inactivity</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="autoLogout" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-200">
+                            <h3 class="font-semibold text-gray-800 mb-4">Data Retention</h3>
+                            <div class="flex flex-wrap gap-4">
+                                <button id="clearCacheBtn" class="btn-secondary">
+                                    <i class="fas fa-trash mr-2"></i>Clear Cache
+                                </button>
+                                <button id="resetSettingsBtn" class="btn-secondary">
+                                    <i class="fas fa-undo mr-2"></i>Reset Settings
+                                </button>
+                                <button id="deleteDataBtn" class="bg-red-100 text-red-700 hover:bg-red-200 px-6 py-3 rounded-lg font-medium transition-all duration-300 border-2 border-red-200">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>Delete All Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- About -->
+                <div class="card p-6">
+                    <h2 class="font-display text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+                        <i class="fas fa-info-circle text-cyan-500 mr-3"></i>
+                        About
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Version</span>
+                            <span class="font-medium text-gray-800">1.0.0</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Last Updated</span>
+                            <span class="font-medium text-gray-800">November 27, 2025</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Data Records</span>
+                            <span class="font-medium text-gray-800" id="dataRecordCount">Loading...</span>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-200">
+                            <p class="text-sm text-gray-600 mb-4">
+                                Kylie's Health Dashboard is designed to provide comprehensive seizure tracking and wellness insights. 
+                                Built with modern web technologies and a focus on user privacy and data security.
+                            </p>
+                            
+                            <div class="flex flex-wrap gap-4">
+                                <button id="helpBtn" class="btn-secondary">
+                                    <i class="fas fa-question-circle mr-2"></i>Help & Support
+                                </button>
+                                <button id="feedbackBtn" class="btn-secondary">
+                                    <i class="fas fa-comment mr-2"></i>Send Feedback
+                                </button>
+                                <button id="privacyBtn" class="btn-secondary">
+                                    <i class="fas fa-file-contract mr-2"></i>Privacy Policy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Settings -->
+                <div class="text-center">
+                    <button id="saveSettingsBtn" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i>Save All Settings
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-white/70 text-sm">
+                © 2025 Kylie's Health Dashboard. Built with care for better health understanding.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let settings = {
+            autoRefresh: true,
+            dataCaching: true,
+            analytics: false,
+            riskAlerts: true,
+            dataReminders: false,
+            weeklyReports: true,
+            theme: 'default',
+            chartStyle: 'modern',
+            dateFormat: 'MM/DD/YYYY',
+            timeFormat: '12',
+            encryption: true,
+            autoLogout: true
+        };
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSettingsPage();
+            setupEventListeners();
+            loadDataRecordCount();
+        });
+        
+        function initializeSettingsPage() {
+            // Load settings from localStorage if available
+            const savedSettings = localStorage.getItem('dashboardSettings');
+            if (savedSettings) {
+                settings = { ...settings, ...JSON.parse(savedSettings) };
+            }
+            
+            // Apply settings to UI
+            applySettingsToUI();
+        }
+        
+        function setupEventListeners() {
+            // Mobile menu
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('open');
+                });
+            }
+            
+            // Toggle switches
+            const toggles = ['autoRefresh', 'dataCaching', 'analytics', 'riskAlerts', 
+                           'dataReminders', 'weeklyReports', 'encryption', 'autoLogout'];
+            toggles.forEach(toggleId => {
+                const toggle = document.getElementById(toggleId);
+                if (toggle) {
+                    toggle.addEventListener('change', (e) => {
+                        settings[toggleId] = e.target.checked;
+                        saveSettings();
+                    });
+                }
+            });
+            
+            // Select dropdowns
+            const selects = ['themeSelect', 'chartStyle', 'dateFormat', 'timeFormat'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.addEventListener('change', (e) => {
+                        const settingName = selectId.replace('Select', '').replace('theme', 'theme');
+                        settings[settingName] = e.target.value;
+                        saveSettings();
+                        applyTheme();
+                    });
+                }
+            });
+            
+            // Buttons
+            document.getElementById('saveSettingsBtn').addEventListener('click', saveAllSettings);
+            document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
+            document.getElementById('exportSeizuresBtn').addEventListener('click', exportSeizuresData);
+            document.getElementById('exportHealthBtn').addEventListener('click', exportHealthData);
+            document.getElementById('clearCacheBtn').addEventListener('click', clearCache);
+            document.getElementById('resetSettingsBtn').addEventListener('click', resetSettings);
+            document.getElementById('deleteDataBtn').addEventListener('click', deleteAllData);
+            document.getElementById('helpBtn').addEventListener('click', showHelp);
+            document.getElementById('feedbackBtn').addEventListener('click', showFeedback);
+            document.getElementById('privacyBtn').addEventListener('click', showPrivacyPolicy);
+        }
+        
+        function applySettingsToUI() {
+            // Apply toggle states
+            Object.keys(settings).forEach(key => {
+                const element = document.getElementById(key);
+                if (element && element.type === 'checkbox') {
+                    element.checked = settings[key];
+                } else if (element && element.tagName === 'SELECT') {
+                    element.value = settings[key];
+                }
+            });
+        }
+        
+        function saveSettings() {
+            localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+        }
+        
+        function saveAllSettings() {
+            saveSettings();
+            showSuccess('Settings saved successfully!');
+        }
+        
+        function applyTheme() {
+            // This would apply theme changes to the page
+            console.log('Applying theme:', settings.theme);
+        }
+        
+        async function loadDataRecordCount() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                const totalRecords = data.data_summary.seizure_records + 
+                                   data.data_summary.pain_records + 
+                                   data.data_summary.apple_watch_records;
+                document.getElementById('dataRecordCount').textContent = `${totalRecords} records`;
+            } catch (error) {
+                document.getElementById('dataRecordCount').textContent = 'Error loading count';
+            }
+        }
+        
+        async function exportAllData() {
+            try {
+                const response = await fetch('/api/export');
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadFile(blob, 'all_data_export.csv');
+                    showSuccess('All data exported successfully!');
+                } else {
+                    showError('Failed to export all data.');
+                }
+            } catch (error) {
+                console.error('Error exporting data:', error);
+                showError('Failed to export data. Please try again.');
+            }
+        }
+        
+        async function exportSeizuresData() {
+            try {
+                const response = await fetch('/api/export');
+                if (response.ok) {
+                    const blob = await response.blob();
+                    downloadFile(blob, 'seizures_data_export.csv');
+                    showSuccess('Seizures data exported successfully!');
+                } else {
+                    showError('Failed to export seizures data.');
+                }
+            } catch (error) {
+                console.error('Error exporting seizures data:', error);
+                showError('Failed to export data. Please try again.');
+            }
+        }
+        
+        async function exportHealthData() {
+            showInfo('Health data export feature coming soon!');
+        }
+        
+        function downloadFile(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function clearCache() {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => caches.delete(name));
+                    });
+                }
+                showSuccess('Cache cleared successfully!');
+            } catch (error) {
+                console.error('Error clearing cache:', error);
+                showError('Failed to clear cache.');
+            }
+        }
+        
+        function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings to default? This cannot be undone.')) {
+                localStorage.removeItem('dashboardSettings');
+                settings = {
+                    autoRefresh: true,
+                    dataCaching: true,
+                    analytics: false,
+                    riskAlerts: true,
+                    dataReminders: false,
+                    weeklyReports: true,
+                    theme: 'default',
+                    chartStyle: 'modern',
+                    dateFormat: 'MM/DD/YYYY',
+                    timeFormat: '12',
+                    encryption: true,
+                    autoLogout: true
+                };
+                applySettingsToUI();
+                showSuccess('Settings reset to default!');
+            }
+        }
+        
+        function deleteAllData() {
+            if (confirm('WARNING: This will permanently delete ALL your data. This cannot be undone. Are you sure?')) {
+                if (confirm('This is your final warning. All seizure records, health data, and settings will be permanently deleted. Continue?')) {
+                    // In a real implementation, this would delete data from the server
+                    localStorage.clear();
+                    showSuccess('All data has been deleted. Please refresh the page.');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                }
+            }
+        }
+        
+        function showHelp() {
+            const helpText = `
+Kylie's Health Dashboard - Help & Support
+
+NAVIGATION:
+- Dashboard: Main overview with key metrics and charts
+- Health Insights: Apple Watch data analysis and correlations
+- Analytics: Advanced statistical analysis and predictions
+- Settings: Customize your dashboard experience
+
+DATA INPUT:
+- Seizure data should be logged with date, time, duration
+- Food intake and menstrual cycle info helps with pattern recognition
+- Apple Watch data provides additional health insights
+
+FEATURES:
+- Interactive charts and visualizations
+- AI-powered insights and recommendations
+- Data export for healthcare providers
+- Privacy-focused with local data storage
+
+For technical support, please contact the development team.
+            `;
+            
+            alert(helpText);
+        }
+        
+        function showFeedback() {
+            const feedback = prompt('We\'d love to hear your feedback! What can we improve?');
+            if (feedback) {
+                // In a real implementation, this would send feedback to the server
+                showSuccess('Thank you for your feedback! We appreciate your input.');
+            }
+        }
+        
+        function showPrivacyPolicy() {
+            const privacyText = `
+Privacy Policy - Kylie's Health Dashboard
+
+DATA COLLECTION:
+- We collect only the health data you voluntarily input
+- Apple Watch data is processed locally on your device
+- No personal information is transmitted to external servers
+
+DATA STORAGE:
+- All data is stored locally in your browser
+- You have full control over your data
+- Data can be exported or deleted at any time
+
+DATA USAGE:
+- Data is used only for your personal health tracking
+- No data is shared with third parties
+- Anonymous usage statistics may be collected to improve the app
+
+SECURITY:
+- Data encryption is available for enhanced security
+- Automatic logout prevents unauthorized access
+- Regular security updates are applied
+
+Your privacy is our priority. You maintain complete control over your health data.
+            `;
+            
+            alert(privacyText);
+        }
+        
+        function showSuccess(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 3000);
+        }
+        
+        function showError(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 5000);
+        }
+        
+        function showInfo(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

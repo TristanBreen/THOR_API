@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Health Insights - Kylie's Health Dashboard</title>
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--gray-800);
+        }
+        
+        .font-display {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .chart-container {
+            min-height: 400px;
+            position: relative;
+        }
+        
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+        
+        .health-metric {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .health-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        
+        .health-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="glass fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-heartbeat text-2xl text-white mr-3"></i>
+                    <span class="font-display text-xl font-semibold text-white">Kylie's Health Dashboard</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex space-x-8">
+                    <a href="/" class="nav-link text-white hover:text-blue-200">Dashboard</a>
+                    <a href="/health" class="nav-link active text-white hover:text-blue-200">Health Insights</a>
+                    <a href="/analytics" class="nav-link text-white hover:text-blue-200">Analytics</a>
+                    <a href="/settings" class="nav-link text-white hover:text-blue-200">Settings</a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden text-white">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Header Section -->
+            <div class="text-center mb-8">
+                <h1 class="font-display text-4xl md:text-5xl font-bold text-white mb-4">
+                    Health Insights
+                </h1>
+                <p class="text-xl text-white/80 mb-6">
+                    Deep analysis of Apple Watch data and health correlations
+                </p>
+            </div>
+
+            <!-- Health Metrics Overview -->
+            <div id="healthMetrics" class="mb-8">
+                <h2 class="font-display text-2xl font-semibold text-white mb-6">Health Metrics Overview</h2>
+                <div id="healthMetricsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div class="card p-6 text-center">
+                        <div class="animate-pulse bg-gray-200 h-12 w-12 rounded-full mx-auto mb-4"></div>
+                        <p class="text-gray-500">Loading health metrics...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sleep Analysis -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="card p-6">
+                    <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-bed text-blue-500 mr-2"></i>Sleep Trends
+                    </h3>
+                    <div id="sleepTrendChart" class="chart-container"></div>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-brain text-purple-500 mr-2"></i>Sleep Stages
+                    </h3>
+                    <div id="sleepStagesChart" class="chart-container"></div>
+                </div>
+            </div>
+
+            <!-- Heart Rate Analysis -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="card p-6">
+                    <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-heartbeat text-red-500 mr-2"></i>Heart Rate Trends
+                    </h3>
+                    <div id="heartRateChart" class="chart-container"></div>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                        <i class="fas fa-running text-green-500 mr-2"></i>Activity Levels
+                    </h3>
+                    <div id="activityChart" class="chart-container"></div>
+                </div>
+            </div>
+
+            <!-- Correlation Analysis -->
+            <div class="card p-6 mb-8">
+                <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-link text-indigo-500 mr-2"></i>Health Correlations
+                </h3>
+                <p class="text-gray-600 mb-6">Analysis of how different health metrics relate to seizure events</p>
+                
+                <div id="correlationGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Correlation cards will be populated here -->
+                </div>
+            </div>
+
+            <!-- Sleep Comparison -->
+            <div class="card p-6 mb-8">
+                <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-chart-line text-orange-500 mr-2"></i>Sleep Quality Comparison
+                </h3>
+                <p class="text-gray-600 mb-6">Sleep metrics 3 days before seizures vs baseline</p>
+                <div id="sleepComparisonChart" class="chart-container"></div>
+            </div>
+
+            <!-- Health Recommendations -->
+            <div class="card p-6">
+                <h3 class="font-display text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>AI Health Recommendations
+                </h3>
+                <div id="recommendationsList" class="space-y-4">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-white/70 text-sm">
+                © 2025 Kylie's Health Dashboard. Built with care for better health understanding.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let healthData = null;
+        
+        // Color palette
+        const colors = {
+            primary: '#6366f1',
+            secondary: '#ec4899',
+            accent: '#06b6d4',
+            success: '#10b981',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+            purple: '#8b5cf6',
+            orange: '#f97316'
+        };
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeHealthPage();
+            setupEventListeners();
+        });
+        
+        async function initializeHealthPage() {
+            try {
+                await loadHealthData();
+                renderHealthPage();
+            } catch (error) {
+                console.error('Error initializing health page:', error);
+                showError('Failed to load health data. Please try again.');
+            }
+        }
+        
+        function setupEventListeners() {
+            // Mobile menu
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('open');
+                });
+            }
+        }
+        
+        async function loadHealthData() {
+            const response = await fetch('/api/data');
+            if (!response.ok) {
+                throw new Error('Failed to fetch health data');
+            }
+            healthData = await response.json();
+        }
+        
+        function renderHealthPage() {
+            if (!healthData) return;
+            
+            renderHealthMetrics();
+            renderSleepCharts();
+            renderHeartRateChart();
+            renderActivityChart();
+            renderCorrelations();
+            renderSleepComparison();
+            renderRecommendations();
+        }
+        
+        function renderHealthMetrics() {
+            const healthInsights = healthData.health_insights;
+            const grid = document.getElementById('healthMetricsGrid');
+            
+            if (!healthInsights || Object.keys(healthInsights).length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-apple-alt text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-600">No Apple Watch data available yet</p>
+                        <p class="text-sm text-gray-500 mt-2">Connect your Apple Watch to unlock health insights</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const metrics = [];
+            
+            // Sleep metrics
+            if (healthInsights.sleep_analysis) {
+                const sleep = healthInsights.sleep_analysis;
+                
+                if (sleep.before_seizure_avg_total !== undefined) {
+                    const baselineDiff = sleep.baseline_avg_total ? 
+                        (sleep.before_seizure_avg_total - sleep.baseline_avg_total).toFixed(1) : 0;
+                    const sleepClass = baselineDiff < -0.5 ? 'health-danger' : 
+                                      baselineDiff < 0 ? 'health-warning' : 'health-metric';
+                    
+                    metrics.push({
+                        title: 'Sleep Before Seizures',
+                        value: `${sleep.before_seizure_avg_total.toFixed(1)}h`,
+                        subtitle: `Baseline: ${sleep.baseline_avg_total ? sleep.baseline_avg_total.toFixed(1) + 'h' : 'N/A'}`,
+                        icon: 'fas fa-bed',
+                        class: sleepClass
+                    });
+                }
+                
+                if (sleep.before_seizure_avg_deep !== undefined) {
+                    metrics.push({
+                        title: 'Deep Sleep Before Seizures',
+                        value: `${sleep.before_seizure_avg_deep.toFixed(1)}h`,
+                        subtitle: `vs Baseline: ${sleep.baseline_avg_deep ? sleep.baseline_avg_deep.toFixed(1) + 'h' : 'N/A'}`,
+                        icon: 'fas fa-brain',
+                        class: 'health-metric'
+                    });
+                }
+            }
+            
+            // Heart rate metrics
+            if (healthInsights.heart_rate_analysis) {
+                const hr = healthInsights.heart_rate_analysis;
+                
+                if (hr.seizure_day_min_hr !== undefined) {
+                    const hrDiff = hr.baseline_min_hr ? (hr.seizure_day_min_hr - hr.baseline_min_hr).toFixed(0) : 0;
+                    const hrClass = hrDiff > 5 ? 'health-warning' : 'health-metric';
+                    
+                    metrics.push({
+                        title: 'Resting HR (Seizure Days)',
+                        value: `${hr.seizure_day_min_hr.toFixed(0)} bpm`,
+                        subtitle: `Baseline: ${hr.baseline_min_hr ? hr.baseline_min_hr.toFixed(0) + ' bpm' : 'N/A'}`,
+                        icon: 'fas fa-heartbeat',
+                        class: hrClass
+                    });
+                }
+            }
+            
+            // Activity metrics
+            if (healthInsights.activity_analysis) {
+                const activity = healthInsights.activity_analysis;
+                
+                if (activity.before_seizure_avg_distance !== undefined) {
+                    metrics.push({
+                        title: 'Activity Before Seizures',
+                        value: `${activity.before_seizure_avg_distance.toFixed(2)} mi`,
+                        subtitle: `vs Baseline: ${activity.baseline_avg_distance ? activity.baseline_avg_distance.toFixed(2) + ' mi' : 'N/A'}`,
+                        icon: 'fas fa-running',
+                        class: 'health-metric'
+                    });
+                }
+            }
+            
+            // Default message if no metrics
+            if (metrics.length === 0) {
+                metrics.push({
+                    title: 'No Health Data',
+                    value: '--',
+                    subtitle: 'Connect Apple Watch',
+                    icon: 'fas fa-apple-alt',
+                    class: 'health-metric'
+                });
+            }
+            
+            grid.innerHTML = metrics.map(metric => `
+                <div class="${metric.class} card p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-white/80 text-sm font-medium">${metric.title}</span>
+                        <i class="${metric.icon} text-white/60"></i>
+                    </div>
+                    <div class="text-3xl font-bold mb-1">${metric.value}</div>
+                    <div class="text-white/70 text-sm">${metric.subtitle}</div>
+                </div>
+            `).join('');
+        }
+        
+        function renderSleepCharts() {
+            const healthCharts = healthData.health_charts;
+            
+            // Sleep trend chart
+            if (healthCharts && healthCharts.sleep_trend) {
+                const sleepData = healthCharts.sleep_trend;
+                
+                const trace1 = {
+                    x: sleepData.dates,
+                    y: sleepData.total_sleep,
+                    mode: 'lines+markers',
+                    name: 'Total Sleep',
+                    line: { color: colors.primary, width: 3 },
+                    marker: { size: 6 }
+                };
+                
+                const trace2 = {
+                    x: sleepData.dates,
+                    y: sleepData.deep_sleep,
+                    mode: 'lines+markers',
+                    name: 'Deep Sleep',
+                    line: { color: colors.purple, width: 2 },
+                    marker: { size: 4 }
+                };
+                
+                const trace3 = {
+                    x: sleepData.dates,
+                    y: sleepData.rem_sleep,
+                    mode: 'lines+markers',
+                    name: 'REM Sleep',
+                    line: { color: colors.success, width: 2 },
+                    marker: { size: 4 }
+                };
+                
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Date' },
+                    yaxis: { title: 'Hours' },
+                    margin: { t: 20, r: 20, b: 50, l: 60 },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Inter, sans-serif' }
+                };
+                
+                Plotly.newPlot('sleepTrendChart', [trace1, trace2, trace3], layout, {responsive: true});
+            } else {
+                document.getElementById('sleepTrendChart').innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-500">
+                        <div class="text-center">
+                            <i class="fas fa-bed text-4xl text-gray-300 mb-4"></i>
+                            <p>No sleep data available</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Sleep stages pie chart (placeholder)
+            const stagesTrace = {
+                labels: ['Deep Sleep', 'REM Sleep', 'Light Sleep', 'Awake'],
+                values: [25, 20, 45, 10],
+                type: 'pie',
+                marker: {
+                    colors: [colors.purple, colors.success, colors.primary, colors.warning]
+                }
+            };
+            
+            const stagesLayout = {
+                title: '',
+                margin: { t: 20, r: 20, b: 20, l: 20 },
+                font: { family: 'Inter, sans-serif' }
+            };
+            
+            Plotly.newPlot('sleepStagesChart', [stagesTrace], stagesLayout, {responsive: true});
+        }
+        
+        function renderHeartRateChart() {
+            const healthCharts = healthData.health_charts;
+            
+            if (healthCharts && healthCharts.heart_rate_trend) {
+                const hrData = healthCharts.heart_rate_trend;
+                
+                const trace1 = {
+                    x: hrData.dates,
+                    y: hrData.min_hr,
+                    mode: 'lines+markers',
+                    name: 'Min HR',
+                    line: { color: colors.success, width: 2 },
+                    marker: { size: 4 }
+                };
+                
+                const trace2 = {
+                    x: hrData.dates,
+                    y: hrData.avg_hr,
+                    mode: 'lines+markers',
+                    name: 'Avg HR',
+                    line: { color: colors.primary, width: 3 },
+                    marker: { size: 6 }
+                };
+                
+                const trace3 = {
+                    x: hrData.dates,
+                    y: hrData.max_hr,
+                    mode: 'lines+markers',
+                    name: 'Max HR',
+                    line: { color: colors.danger, width: 2 },
+                    marker: { size: 4 }
+                };
+                
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Date' },
+                    yaxis: { title: 'Heart Rate (bpm)' },
+                    margin: { t: 20, r: 20, b: 50, l: 60 },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Inter, sans-serif' }
+                };
+                
+                Plotly.newPlot('heartRateChart', [trace1, trace2, trace3], layout, {responsive: true});
+            } else {
+                document.getElementById('heartRateChart').innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-500">
+                        <div class="text-center">
+                            <i class="fas fa-heartbeat text-4xl text-gray-300 mb-4"></i>
+                            <p>No heart rate data available</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderActivityChart() {
+            const healthCharts = healthData.health_charts;
+            
+            if (healthCharts && healthCharts.activity_trend) {
+                const activityData = healthCharts.activity_trend;
+                
+                const trace = {
+                    x: activityData.dates,
+                    y: activityData.distance,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: 'Daily Distance',
+                    line: { color: colors.success, width: 3 },
+                    marker: { color: colors.success, size: 6 }
+                };
+                
+                const layout = {
+                    title: '',
+                    xaxis: { title: 'Date' },
+                    yaxis: { title: 'Distance (miles)' },
+                    margin: { t: 20, r: 20, b: 50, l: 60 },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Inter, sans-serif' }
+                };
+                
+                Plotly.newPlot('activityChart', [trace], layout, {responsive: true});
+            } else {
+                document.getElementById('activityChart').innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-500">
+                        <div class="text-center">
+                            <i class="fas fa-running text-4xl text-gray-300 mb-4"></i>
+                            <p>No activity data available</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderCorrelations() {
+            const grid = document.getElementById('correlationGrid');
+            const correlations = [
+                {
+                    title: 'Sleep Quality Impact',
+                    description: 'Poor sleep quality 3 days before seizures',
+                    correlation: 'Strong',
+                    strength: 'high',
+                    icon: 'fas fa-bed'
+                },
+                {
+                    title: 'Heart Rate Variability',
+                    description: 'Elevated resting HR on seizure days',
+                    correlation: 'Moderate',
+                    strength: 'medium',
+                    icon: 'fas fa-heartbeat'
+                },
+                {
+                    title: 'Activity Level Correlation',
+                    description: 'Lower activity before seizure episodes',
+                    correlation: 'Weak',
+                    strength: 'low',
+                    icon: 'fas fa-running'
+                }
+            ];
+            
+            grid.innerHTML = correlations.map(corr => {
+                const strengthColor = {
+                    high: 'text-red-600 bg-red-100',
+                    medium: 'text-yellow-600 bg-yellow-100',
+                    low: 'text-green-600 bg-green-100'
+                }[corr.strength];
+                
+                return `
+                    <div class="card p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="${corr.icon} text-blue-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${corr.title}</h4>
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${strengthColor}">
+                                    ${corr.correlation} Correlation
+                                </span>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 text-sm">${corr.description}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderSleepComparison() {
+            // Sample sleep comparison data
+            const categories = ['Total Sleep', 'Deep Sleep', 'REM Sleep', 'Sleep Efficiency'];
+            const baseline = [7.5, 1.8, 1.5, 85];
+            const beforeSeizure = [6.2, 1.2, 1.1, 72];
+            
+            const trace1 = {
+                x: categories,
+                y: baseline,
+                name: 'Baseline',
+                type: 'bar',
+                marker: { color: colors.success, opacity: 0.8 }
+            };
+            
+            const trace2 = {
+                x: categories,
+                y: beforeSeizure,
+                name: '3 Days Before Seizures',
+                type: 'bar',
+                marker: { color: colors.warning, opacity: 0.8 }
+            };
+            
+            const layout = {
+                title: '',
+                xaxis: { title: 'Sleep Metrics' },
+                yaxis: { title: 'Hours / Percentage' },
+                barmode: 'group',
+                margin: { t: 20, r: 20, b: 50, l: 60 },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { family: 'Inter, sans-serif' }
+            };
+            
+            Plotly.newPlot('sleepComparisonChart', [trace1, trace2], layout, {responsive: true});
+        }
+        
+        function renderRecommendations() {
+            const recommendations = [
+                {
+                    title: 'Improve Sleep Hygiene',
+                    description: 'Focus on getting 7-9 hours of quality sleep, especially in the 3 days leading up to high-risk periods.',
+                    priority: 'high',
+                    icon: 'fas fa-bed',
+                    actions: ['Set consistent bedtime', 'Avoid screens before bed', 'Create cool, dark environment']
+                },
+                {
+                    title: 'Monitor Heart Rate Patterns',
+                    description: 'Track resting heart rate trends and consider stress reduction techniques when elevated.',
+                    priority: 'medium',
+                    icon: 'fas fa-heartbeat',
+                    actions: ['Practice deep breathing', 'Consider meditation', 'Monitor stress levels']
+                },
+                {
+                    title: 'Maintain Regular Activity',
+                    description: 'Keep consistent physical activity levels, as significant decreases may correlate with seizure risk.',
+                    priority: 'medium',
+                    icon: 'fas fa-running',
+                    actions: ['Daily walks', 'Consistent exercise routine', 'Avoid sudden activity changes']
+                },
+                {
+                    title: 'Track Environmental Factors',
+                    description: 'Monitor how different environments, foods, and stress levels affect your seizure patterns.',
+                    priority: 'low',
+                    icon: 'fas fa-clipboard-list',
+                    actions: ['Food diary', 'Stress tracking', 'Environmental notes']
+                }
+            ];
+            
+            const priorityColors = {
+                high: 'border-red-200 bg-red-50',
+                medium: 'border-yellow-200 bg-yellow-50',
+                low: 'border-green-200 bg-green-50'
+            };
+            
+            const priorityTextColors = {
+                high: 'text-red-800',
+                medium: 'text-yellow-800',
+                low: 'text-green-800'
+            };
+            
+            document.getElementById('recommendationsList').innerHTML = recommendations.map(rec => `
+                <div class="border rounded-lg p-6 ${priorityColors[rec.priority]}">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                                <i class="${rec.icon} text-2xl ${priorityTextColors[rec.priority]}"></i>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-semibold text-lg ${priorityTextColors[rec.priority]}">${rec.title}</h4>
+                                <span class="px-3 py-1 rounded-full text-xs font-medium bg-white text-gray-700 shadow-sm">
+                                    ${rec.priority.toUpperCase()} PRIORITY
+                                </span>
+                            </div>
+                            <p class="text-gray-700 mb-4">${rec.description}</p>
+                            <div class="space-y-2">
+                                <h5 class="font-medium text-gray-800">Recommended Actions:</h5>
+                                <ul class="space-y-1">
+                                    ${rec.actions.map(action => `
+                                        <li class="flex items-center text-sm text-gray-600">
+                                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                            ${action}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showError(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

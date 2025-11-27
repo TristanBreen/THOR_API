@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Error - Kylie's Health Dashboard</title>
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--gray-800);
+        }
+        
+        .font-display {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .nav-link {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .error-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.6); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="glass fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-heartbeat text-2xl text-white mr-3"></i>
+                    <span class="font-display text-xl font-semibold text-white">Kylie's Health Dashboard</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex space-x-8">
+                    <a href="/" class="nav-link text-white hover:text-blue-200">Dashboard</a>
+                    <a href="/health" class="nav-link text-white hover:text-blue-200">Health Insights</a>
+                    <a href="/analytics" class="nav-link text-white hover:text-blue-200">Analytics</a>
+                    <a href="/settings" class="nav-link text-white hover:text-blue-200">Settings</a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden text-white">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-8">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Error Content -->
+            <div class="text-center mb-12">
+                <div class="error-animation mb-8">
+                    <div class="inline-block p-8 bg-white/10 backdrop-blur-sm rounded-full pulse-glow">
+                        <i class="fas fa-exclamation-triangle text-6xl text-red-400"></i>
+                    </div>
+                </div>
+                
+                <h1 class="font-display text-4xl md:text-6xl font-bold text-white mb-4">
+                    Oops!
+                </h1>
+                
+                <div class="card p-8 max-w-2xl mx-auto">
+                    <h2 class="font-display text-2xl md:text-3xl font-semibold mb-4 text-gray-800" id="errorTitle">
+                        Something went wrong
+                    </h2>
+                    
+                    <p class="text-lg text-gray-600 mb-6" id="errorMessage">
+                        We encountered an unexpected error while processing your request.
+                    </p>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                        <h3 class="font-semibold text-gray-800 mb-2">Error Details:</h3>
+                        <div class="text-sm text-gray-600 space-y-1" id="errorDetails">
+                            <p><strong>Error Code:</strong> <span id="errorCode">UNKNOWN</span></p>
+                            <p><strong>Timestamp:</strong> <span id="errorTimestamp">--</span></p>
+                            <p><strong>User Agent:</strong> <span id="userAgent">--</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <p class="text-sm text-gray-600">
+                            Here are some things you can try:
+                        </p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-sync-alt text-blue-500 mt-1"></i>
+                                <span class="text-gray-600">Refresh the page and try again</span>
+                            </div>
+                            
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-home text-green-500 mt-1"></i>
+                                <span class="text-gray-600">Return to the dashboard</span>
+                            </div>
+                            
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-history text-purple-500 mt-1"></i>
+                                <span class="text-gray-600">Clear your browser cache</span>
+                            </div>
+                            
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-envelope text-orange-500 mt-1"></i>
+                                <span class="text-gray-600">Contact support if the issue persists</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap justify-center gap-4 mt-8">
+                    <button onclick="window.location.href='/'" class="btn-primary">
+                        <i class="fas fa-home mr-2"></i>Go to Dashboard
+                    </button>
+                    
+                    <button onclick="window.location.reload()" class="btn-primary">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh Page
+                    </button>
+                    
+                    <button onclick="history.back()" class="btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>Go Back
+                    </button>
+                </div>
+                
+                <!-- Support Information -->
+                <div class="mt-12 text-white/70">
+                    <p class="mb-4">
+                        If you continue to experience issues, please contact support with the error details above.
+                    </p>
+                    
+                    <div class="flex flex-wrap justify-center gap-6 text-sm">
+                        <a href="/settings" class="hover:text-white transition-colors">
+                            <i class="fas fa-cog mr-1"></i>Settings
+                        </a>
+                        
+                        <a href="mailto:support@example.com" class="hover:text-white transition-colors">
+                            <i class="fas fa-envelope mr-1"></i>Email Support
+                        </a>
+                        
+                        <button onclick="copyErrorDetails()" class="hover:text-white transition-colors">
+                            <i class="fas fa-copy mr-1"></i>Copy Error Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-white/70 text-sm">
+                © 2025 Kylie's Health Dashboard. Built with care for better health understanding.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Global variables
+        let errorInfo = {
+            code: 'UNKNOWN',
+            title: 'Something went wrong',
+            message: 'We encountered an unexpected error while processing your request.',
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: window.location.href
+        };
+        
+        // Initialize error page
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            populateErrorDetails();
+        });
+        
+        function setupEventListeners() {
+            // Mobile menu
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('open');
+                });
+            }
+            
+            // Try to extract error information from URL or session
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorCode = urlParams.get('code') || document.querySelector('[data-error-code]')?.dataset.errorCode;
+            const errorMessage = urlParams.get('message') || document.querySelector('[data-error-message]')?.dataset.errorMessage;
+            
+            if (errorCode) {
+                errorInfo.code = errorCode;
+                updateErrorDisplay();
+            }
+            
+            if (errorMessage) {
+                errorInfo.message = decodeURIComponent(errorMessage);
+                updateErrorDisplay();
+            }
+        }
+        
+        function populateErrorDetails() {
+            document.getElementById('errorCode').textContent = errorInfo.code;
+            document.getElementById('errorTimestamp').textContent = new Date(errorInfo.timestamp).toLocaleString();
+            document.getElementById('userAgent').textContent = errorInfo.userAgent.substring(0, 50) + '...';
+            
+            // Set page title based on error code
+            let title, message;
+            switch(errorInfo.code) {
+                case '404':
+                    title = 'Page Not Found';
+                    message = 'The page you\'re looking for doesn\'t exist or has been moved.';
+                    break;
+                case '500':
+                    title = 'Server Error';
+                    message = 'Our server encountered an internal error. Please try again later.';
+                    break;
+                case '403':
+                    title = 'Access Denied';
+                    message = 'You don\'t have permission to access this page.';
+                    break;
+                case '401':
+                    title = 'Unauthorized';
+                    message = 'Please log in to access this page.';
+                    break;
+                default:
+                    title = 'Something went wrong';
+                    message = 'We encountered an unexpected error while processing your request.';
+            }
+            
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+        }
+        
+        function updateErrorDisplay() {
+            // Update the error details section
+            const errorDetails = document.getElementById('errorDetails');
+            errorDetails.innerHTML = `
+                <p><strong>Error Code:</strong> <span id="errorCode">${errorInfo.code}</span></p>
+                <p><strong>Timestamp:</strong> <span id="errorTimestamp">${new Date(errorInfo.timestamp).toLocaleString()}</span></p>
+                <p><strong>User Agent:</strong> <span id="userAgent">${errorInfo.userAgent.substring(0, 50)}...</span></p>
+                <p><strong>URL:</strong> ${errorInfo.url}</p>
+            `;
+        }
+        
+        function copyErrorDetails() {
+            const errorDetailsText = `
+Error Code: ${errorInfo.code}
+Timestamp: ${new Date(errorInfo.timestamp).toLocaleString()}
+User Agent: ${errorInfo.userAgent}
+URL: ${errorInfo.url}
+
+Please include these details when contacting support.
+            `;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(errorDetailsText).then(() => {
+                    showNotification('Error details copied to clipboard!', 'success');
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(errorDetailsText);
+                });
+            } else {
+                fallbackCopyTextToClipboard(errorDetailsText);
+            }
+        }
+        
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showNotification('Error details copied to clipboard!', 'success');
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                showNotification('Failed to copy error details', 'error');
+            }
+            document.body.removeChild(textArea);
+        }
+        
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            
+            notification.className = `fixed top-20 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="${icon} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, type === 'success' ? 3000 : 5000);
+        }
+        
+        // Handle JavaScript errors
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e.error);
+            errorInfo.code = 'JS_ERROR';
+            errorInfo.message = e.message || 'JavaScript execution error';
+            errorInfo.timestamp = new Date().toISOString();
+            updateErrorDisplay();
+        });
+        
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled Promise Rejection:', e.reason);
+            errorInfo.code = 'PROMISE_ERROR';
+            errorInfo.message = e.reason?.message || 'Unhandled promise rejection';
+            errorInfo.timestamp = new Date().toISOString();
+            updateErrorDisplay();
+        });
+        
+        // Performance monitoring
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const perfData = performance.getEntriesByType('navigation')[0];
+                if (perfData && perfData.duration > 10000) {
+                    console.warn('Slow page load detected:', perfData.duration + 'ms');
+                }
+            }, 0);
+        });
+    </script>
+</body>
+</html>

@@ -1,45 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seizure Monitoring Dashboard</title>
-    <meta http-equiv="refresh" content="0; url=/api/data">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Kylie's Health Dashboard</title>
+    
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Core Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Styles -->
     <style>
         body {
-            font-family: 'IBM Plex Sans', sans-serif;
-            background-color: #faf8f3;
-            color: #2d2d2d;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
+            justify-content: center;
             margin: 0;
+            color: white;
         }
-        .loading {
-            text-align: center;
-        }
-        .loading h1 {
+        
+        .font-display {
             font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
         }
-        .loading p {
-            font-size: 1.1rem;
-            color: #6b6b6b;
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
         }
     </style>
+    
+    <!-- Redirect to Dashboard -->
+    <meta http-equiv="refresh" content="2;url=/dashboard.html">
 </head>
 <body>
-    <div class="loading">
-        <h1>Seizure Monitoring Dashboard</h1>
-        <p>Loading dashboard...</p>
-        <p><a href="/api/data" style="color: #8b7355;">Click here if not redirected automatically</a></p>
+    <div class="text-center">
+        <div class="mb-8">
+            <i class="fas fa-heartbeat text-6xl text-white mb-4 pulse"></i>
+            <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">
+                Kylie's Health Dashboard
+            </h1>
+            <p class="text-xl text-white/80 mb-8">
+                Loading your personalized health insights...
+            </p>
+        </div>
+        
+        <div class="loading-spinner mx-auto mb-6"></div>
+        
+        <p class="text-white/70">
+            Redirecting to dashboard in 2 seconds...
+        </p>
+        
+        <div class="mt-8">
+            <a href="/dashboard.html" class="inline-block bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 backdrop-blur-sm">
+                <i class="fas fa-arrow-right mr-2"></i>Go to Dashboard
+            </a>
+        </div>
+        
+        <div class="mt-12 text-white/50 text-sm">
+            <p>Built with care for better health understanding</p>
+        </div>
     </div>
     
     <script>
-        // Redirect to the Flask application
-        window.location.href = '/api/data';
+        // If redirect doesn't work, provide manual navigation
+        setTimeout(() => {
+            if (window.location.pathname !== '/dashboard.html') {
+                window.location.href = '/dashboard.html';
+            }
+        }, 2000);
     </script>
 </body>
 </html>

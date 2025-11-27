@@ -1,46 +1,50 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, send_from_directory
 import pandas as pd
 import json
 from datetime import datetime, timedelta
 import os
 import numpy as np
+from functools import lru_cache
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Resolve CSV file paths: check server absolute path first, then Docker mount, then local Data folder
-SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+# Configure Flask
+app.config['JSON_SORT_KEYS'] = False
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
-# Determine which base path to use (check in priority order)
-if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
-    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
-elif os.path.exists('/data/Data'):
-    BASE_DATA_DIR = '/data/Data'
-elif os.path.exists(os.path.join(PARENT_DIR, "Data")):
-    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
-else:
-    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
-    os.makedirs(BASE_DATA_DIR, exist_ok=True)
+# Resolve CSV file paths with better error handling
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, 'Data')
 
 # Set CSV file paths
-SEIZURES_CSV = os.path.join(BASE_DATA_DIR, "seizures.csv")
-PAIN_CSV = os.path.join(BASE_DATA_DIR, "pain.csv")
-APPLE_WATCH_CSV = os.path.join(BASE_DATA_DIR, "appleWatchData.csv")
+SEIZURES_CSV = os.path.join(DATA_DIR, "seizures.csv")
+PAIN_CSV = os.path.join(DATA_DIR, "pain.csv")
+APPLE_WATCH_CSV = os.path.join(DATA_DIR, "appleWatchData.csv")
 
-# Debug: Print which path is being used
-print(f"[WEBPAGE] Using BASE_DATA_DIR: {BASE_DATA_DIR}")
-print(f"[WEBPAGE] SEIZURES_CSV: {SEIZURES_CSV} (exists: {os.path.exists(SEIZURES_CSV)})")
-print(f"[WEBPAGE] PAIN_CSV: {PAIN_CSV} (exists: {os.path.exists(PAIN_CSV)})")
-print(f"[WEBPAGE] APPLE_WATCH_CSV: {APPLE_WATCH_CSV} (exists: {os.path.exists(APPLE_WATCH_CSV)})")
+# Debug logging
+logger.info(f"Using DATA_DIR: {DATA_DIR}")
+logger.info(f"SEIZURES_CSV: {SEIZURES_CSV} (exists: {os.path.exists(SEIZURES_CSV)})")
+logger.info(f"PAIN_CSV: {PAIN_CSV} (exists: {os.path.exists(PAIN_CSV)})")
+logger.info(f"APPLE_WATCH_CSV: {APPLE_WATCH_CSV} (exists: {os.path.exists(APPLE_WATCH_CSV)})")
 
+@lru_cache(maxsize=128)
 def load_apple_watch_data():
-    """Load and process Apple Watch data from CSV file"""
+    """Load and process Apple Watch data from CSV file with caching"""
     try:
+        if not os.path.exists(APPLE_WATCH_CSV):
+            logger.warning(f"Apple Watch data file not found: {APPLE_WATCH_CSV}")
+            return pd.DataFrame()
+            
         df = pd.read_csv(APPLE_WATCH_CSV)
         df.columns = df.columns.str.strip()
         
-        # Parse timestamp
+        # Parse timestamp with better error handling
         df['timestamp'] = pd.to_datetime(df['Date/Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
         df = df.dropna(subset=['timestamp'])
         df = df.sort_values('timestamp', ascending=True)
@@ -48,531 +52,552 @@ def load_apple_watch_data():
         # Extract date for daily aggregation
         df['date'] = df['timestamp'].dt.date
         
+        # Clean and normalize data
+        numeric_columns = ['Heart Rate [Min] (count/min)', 'Heart Rate [Max] (count/min)', 
+                          'Heart Rate [Avg] (count/min)', 'Sleep Analysis [Total] (hr)',
+                          'Sleep Analysis [Asleep] (hr)', 'Sleep Analysis [In Bed] (hr)',
+                          'Sleep Analysis [Core] (hr)', 'Sleep Analysis [Deep] (hr)',
+                          'Sleep Analysis [REM] (hr)', 'Sleep Analysis [Awake] (hr)',
+                          'Walking + Running Distance (mi)']
+        
+        for col in numeric_columns:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
         return df
     except Exception as e:
-        print(f"Error loading Apple Watch data: {e}")
+        logger.error(f"Error loading Apple Watch data: {e}")
         return pd.DataFrame()
 
+@lru_cache(maxsize=128)
 def load_pain_data():
-    """Load and process pain data from CSV file"""
+    """Load and process pain data from CSV file with caching"""
     try:
+        if not os.path.exists(PAIN_CSV):
+            logger.warning(f"Pain data file not found: {PAIN_CSV}")
+            return pd.DataFrame()
+            
         df = pd.read_csv(PAIN_CSV)
         df.columns = df.columns.str.strip()
         
-        df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+        # Handle different column naming conventions
+        date_col = 'Date' if 'Date' in df.columns else df.columns[0]
+        time_col = 'Time' if 'Time' in df.columns else df.columns[1]
+        pain_col = 'Pain' if 'Pain' in df.columns else df.columns[2]
+        
+        df['timestamp'] = pd.to_datetime(df[date_col] + ' ' + df[time_col], 
+                                       format='%Y-%m-%d %H:%M:%S', errors='coerce')
         df = df.dropna(subset=['timestamp'])
         df = df.sort_values('timestamp', ascending=True)
-        df = df[['timestamp', 'Pain']]
+        df = df[['timestamp', pain_col]].rename(columns={pain_col: 'Pain'})
         
         return df
     except Exception as e:
-        print(f"Error loading pain data: {e}")
+        logger.error(f"Error loading pain data: {e}")
         return pd.DataFrame()
 
+@lru_cache(maxsize=128)
 def load_seizure_data():
-    """Load and process seizure data from CSV file"""
+    """Load and process seizure data from CSV file with caching"""
     try:
+        if not os.path.exists(SEIZURES_CSV):
+            logger.warning(f"Seizure data file not found: {SEIZURES_CSV}")
+            return pd.DataFrame()
+            
         df = pd.read_csv(SEIZURES_CSV)
         
-        df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-        df['duration_seconds'] = df['Duration']
+        # Handle column mapping with fallback
+        column_mapping = {
+            'Date': 'Date',
+            'Time': 'Time', 
+            'Duration': 'Duration',
+            'Peiod': 'Period',
+            'Eaten': 'Eaten',
+            'Food Eaten': 'Food_Eaten'
+        }
+        
+        # Find actual column names
+        actual_columns = {}
+        for standard, fallback in column_mapping.items():
+            matches = [col for col in df.columns if standard.lower() in col.lower()]
+            actual_columns[standard] = matches[0] if matches else fallback
+        
+        df['timestamp'] = pd.to_datetime(df[actual_columns['Date']] + ' ' + df[actual_columns['Time']], 
+                                       format='%Y-%m-%d %H:%M:%S', errors='coerce')
+        df['duration_seconds'] = pd.to_numeric(df[actual_columns['Duration']], errors='coerce')
         df['hour_of_day'] = df['timestamp'].dt.hour
         df['day_of_week'] = df['timestamp'].dt.day_name()
         df['date'] = df['timestamp'].dt.date
-        df['food_eaten'] = df['Eaten'].astype(str).str.lower() == 'true'
-        df['period'] = df['Peiod'].astype(str).str.lower() == 'true'
+        df['month'] = df['timestamp'].dt.to_period('M')
         
-        df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten', 'period']]
-        df = df.dropna(subset=['timestamp'])
-        df = df.sort_values('timestamp', ascending=False)
+        # Handle boolean fields with better error handling
+        period_col = actual_columns['Period']
+        eaten_col = actual_columns['Eaten']
         
-        return df
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return pd.DataFrame()
-
-def get_daily_sleep_metrics(watch_df):
-    """Aggregate sleep metrics by date from hourly Apple Watch data"""
-    if watch_df.empty:
-        return pd.DataFrame()
-    
-    # Sleep data appears at midnight (00:00:00) each day
-    sleep_data = watch_df[watch_df['timestamp'].dt.hour == 0].copy()
-    
-    if sleep_data.empty:
-        return pd.DataFrame()
-    
-    sleep_metrics = []
-    for _, row in sleep_data.iterrows():
-        date = row['date']
-        metrics = {
-            'date': date,
-            'total_sleep': row.get('Sleep Analysis [Total] (hr)', 0),
-            'deep_sleep': row.get('Sleep Analysis [Deep] (hr)', 0),
-            'rem_sleep': row.get('Sleep Analysis [REM] (hr)', 0),
-            'core_sleep': row.get('Sleep Analysis [Core] (hr)', 0),
-            'awake_time': row.get('Sleep Analysis [Awake] (hr)', 0)
-        }
-        sleep_metrics.append(metrics)
-    
-    return pd.DataFrame(sleep_metrics)
-
-def get_daily_heart_rate_metrics(watch_df):
-    """Aggregate heart rate metrics by date"""
-    if watch_df.empty:
-        return pd.DataFrame()
-    
-    daily_hr = watch_df.groupby('date').agg({
-        'Heart Rate [Min] (count/min)': 'min',
-        'Heart Rate [Max] (count/min)': 'max',
-        'Heart Rate [Avg] (count/min)': 'mean'
-    }).reset_index()
-    
-    daily_hr.columns = ['date', 'min_hr', 'max_hr', 'avg_hr']
-    return daily_hr
-
-def get_daily_activity_metrics(watch_df):
-    """Aggregate activity metrics by date"""
-    if watch_df.empty:
-        return pd.DataFrame()
-    
-    daily_activity = watch_df.groupby('date').agg({
-        'Walking + Running Distance (mi)': 'sum'
-    }).reset_index()
-    
-    daily_activity.columns = ['date', 'walking_distance']
-    return daily_activity
-
-def analyze_sleep_before_seizures(seizure_df, watch_df):
-    """Compare sleep metrics on days before seizures vs baseline"""
-    if seizure_df.empty or watch_df.empty:
-        return {}
-    
-    sleep_df = get_daily_sleep_metrics(watch_df)
-    if sleep_df.empty:
-        return {}
-    
-    # Get unique seizure dates
-    seizure_dates = set(seizure_df['date'].unique())
-    
-    # Analyze sleep 1-3 days before seizures
-    sleep_before_seizures = []
-    baseline_sleep = []
-    
-    for _, sleep_row in sleep_df.iterrows():
-        sleep_date = sleep_row['date']
+        df['food_eaten'] = df[eaten_col].astype(str).str.lower().isin(['true', '1', 'yes'])
+        df['period'] = df[period_col].astype(str).str.lower().isin(['true', '1', 'yes'])
         
-        # Check if any seizure occurred 1-3 days after this sleep date
-        is_before_seizure = any(
-            (seizure_date - sleep_date).days in [1, 2, 3]
-            for seizure_date in seizure_dates
-        )
-        
-        if is_before_seizure:
-            sleep_before_seizures.append(sleep_row)
+        # Keep food description if available
+        if actual_columns['Food_Eaten'] in df.columns:
+            df['food_description'] = df[actual_columns['Food_Eaten']].fillna('')
         else:
-            baseline_sleep.append(sleep_row)
-    
-    if not sleep_before_seizures:
+            df['food_description'] = ''
+        
+        result_df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 
+                       'date', 'food_eaten', 'period', 'food_description']].copy()
+        result_df = result_df.dropna(subset=['timestamp'])
+        result_df = result_df.sort_values('timestamp', ascending=False)
+        
+        return result_df
+    except Exception as e:
+        logger.error(f"Error loading seizure data: {e}")
+        return pd.DataFrame()
+
+def calculate_statistics(seizure_df):
+    """Calculate comprehensive seizure statistics"""
+    if seizure_df.empty:
         return {}
+    
+    total_seizures = len(seizure_df)
+    first_record = seizure_df['timestamp'].min()
+    last_record = seizure_df['timestamp'].max()
+    date_range_days = (last_record - first_record).days
+    
+    # Recent statistics (last 7 and 30 days)
+    seven_days_ago = datetime.now() - timedelta(days=7)
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    
+    recent_7_days = len(seizure_df[seizure_df['timestamp'] >= seven_days_ago])
+    recent_30_days = len(seizure_df[seizure_df['timestamp'] >= thirty_days_ago])
+    
+    # Duration statistics
+    avg_duration = seizure_df['duration_seconds'].mean()
+    min_duration = seizure_df['duration_seconds'].min()
+    max_duration = seizure_df['duration_seconds'].max()
+    
+    # Food and period statistics
+    food_eaten_count = len(seizure_df[seizure_df['food_eaten'] == True])
+    no_food_count = len(seizure_df[seizure_df['food_eaten'] == False])
+    period_related_count = len(seizure_df[seizure_df['period'] == True])
     
     # Calculate averages
-    before_df = pd.DataFrame(sleep_before_seizures)
-    baseline_df = pd.DataFrame(baseline_sleep) if baseline_sleep else pd.DataFrame()
-    
-    result = {
-        'before_seizure_avg_total': float(before_df['total_sleep'].mean()),
-        'before_seizure_avg_deep': float(before_df['deep_sleep'].mean()),
-        'before_seizure_avg_rem': float(before_df['rem_sleep'].mean()),
-        'before_seizure_count': len(before_df)
-    }
-    
-    if not baseline_df.empty:
-        result.update({
-            'baseline_avg_total': float(baseline_df['total_sleep'].mean()),
-            'baseline_avg_deep': float(baseline_df['deep_sleep'].mean()),
-            'baseline_avg_rem': float(baseline_df['rem_sleep'].mean()),
-            'baseline_count': len(baseline_df)
-        })
-    
-    return result
-
-def calculate_sleep_debt(watch_df, target_hours=7.5):
-    """Calculate cumulative sleep debt over time"""
-    if watch_df.empty:
-        return []
-    
-    sleep_df = get_daily_sleep_metrics(watch_df)
-    if sleep_df.empty:
-        return []
-    
-    sleep_df = sleep_df.sort_values('date')
-    sleep_df['sleep_deficit'] = target_hours - sleep_df['total_sleep']
-    sleep_df['cumulative_debt_3day'] = sleep_df['sleep_deficit'].rolling(window=3, min_periods=1).sum()
-    sleep_df['cumulative_debt_7day'] = sleep_df['sleep_deficit'].rolling(window=7, min_periods=1).sum()
-    sleep_df['date'] = sleep_df['date'].astype(str)
-    
-    return sleep_df[['date', 'total_sleep', 'sleep_deficit', 'cumulative_debt_3day', 'cumulative_debt_7day']].to_dict('records')
-
-def analyze_heart_rate_trends(seizure_df, watch_df):
-    """Analyze heart rate patterns around seizure days"""
-    if seizure_df.empty or watch_df.empty:
-        return {}
-    
-    hr_df = get_daily_heart_rate_metrics(watch_df)
-    if hr_df.empty:
-        return {}
-    
-    seizure_dates = set(seizure_df['date'].unique())
-    
-    # Separate seizure days from non-seizure days
-    hr_df['is_seizure_day'] = hr_df['date'].apply(lambda d: d in seizure_dates)
-    
-    seizure_hr = hr_df[hr_df['is_seizure_day']]
-    baseline_hr = hr_df[~hr_df['is_seizure_day']]
-    
-    result = {}
-    
-    if not seizure_hr.empty:
-        result['seizure_day_min_hr'] = float(seizure_hr['min_hr'].mean())
-        result['seizure_day_avg_hr'] = float(seizure_hr['avg_hr'].mean())
-        result['seizure_day_max_hr'] = float(seizure_hr['max_hr'].mean())
-    
-    if not baseline_hr.empty:
-        result['baseline_min_hr'] = float(baseline_hr['min_hr'].mean())
-        result['baseline_avg_hr'] = float(baseline_hr['avg_hr'].mean())
-        result['baseline_max_hr'] = float(baseline_hr['max_hr'].mean())
-    
-    return result
-
-def analyze_activity_correlation(seizure_df, watch_df):
-    """Analyze activity levels 1-2 days before seizures"""
-    if seizure_df.empty or watch_df.empty:
-        return {}
-    
-    activity_df = get_daily_activity_metrics(watch_df)
-    if activity_df.empty:
-        return {}
-    
-    seizure_dates = set(seizure_df['date'].unique())
-    
-    # Activity 1-2 days before seizures
-    activity_before_seizures = []
-    baseline_activity = []
-    
-    for _, activity_row in activity_df.iterrows():
-        activity_date = activity_row['date']
-        
-        is_before_seizure = any(
-            (seizure_date - activity_date).days in [1, 2]
-            for seizure_date in seizure_dates
-        )
-        
-        if is_before_seizure:
-            activity_before_seizures.append(activity_row['walking_distance'])
-        else:
-            baseline_activity.append(activity_row['walking_distance'])
-    
-    result = {}
-    
-    if activity_before_seizures:
-        result['before_seizure_avg_distance'] = float(np.mean(activity_before_seizures))
-    
-    if baseline_activity:
-        result['baseline_avg_distance'] = float(np.mean(baseline_activity))
-    
-    return result
-
-def prepare_health_chart_data(seizure_df, watch_df):
-    """Prepare chart data for new health metrics"""
-    if watch_df.empty:
-        return {}
-    
-    sleep_df = get_daily_sleep_metrics(watch_df)
-    hr_df = get_daily_heart_rate_metrics(watch_df)
-    activity_df = get_daily_activity_metrics(watch_df)
-    
-    # Merge all metrics by date
-    combined = sleep_df.copy() if not sleep_df.empty else pd.DataFrame()
-    
-    if not hr_df.empty and not combined.empty:
-        combined = combined.merge(hr_df, on='date', how='outer')
-    elif not hr_df.empty:
-        combined = hr_df.copy()
-    
-    if not activity_df.empty and not combined.empty:
-        combined = combined.merge(activity_df, on='date', how='outer')
-    elif not activity_df.empty:
-        combined = activity_df.copy()
-    
-    if combined.empty:
-        return {}
-    
-    combined = combined.sort_values('date')
-    combined['date_str'] = combined['date'].astype(str)
-    
-    # Mark seizure days
-    if not seizure_df.empty:
-        seizure_dates = set(seizure_df['date'].unique())
-        combined['has_seizure'] = combined['date'].apply(lambda d: d in seizure_dates)
-        seizure_markers = combined[combined['has_seizure']].copy()
-    else:
-        seizure_markers = pd.DataFrame()
-    
-    # Sleep debt calculation
-    sleep_debt = calculate_sleep_debt(watch_df)
-    
-    # Sleep stage ratios
-    if not sleep_df.empty and 'total_sleep' in sleep_df.columns:
-        sleep_df['deep_ratio'] = (sleep_df['deep_sleep'] / sleep_df['total_sleep'] * 100).fillna(0)
-        sleep_df['rem_ratio'] = (sleep_df['rem_sleep'] / sleep_df['total_sleep'] * 100).fillna(0)
-        sleep_df['core_ratio'] = (sleep_df['core_sleep'] / sleep_df['total_sleep'] * 100).fillna(0)
-    
-    result = {
-        'sleep_timeline': combined[['date_str', 'total_sleep', 'deep_sleep', 'rem_sleep']].fillna(0).to_dict('records') if 'total_sleep' in combined.columns else [],
-        'hr_timeline': combined[['date_str', 'min_hr', 'avg_hr', 'max_hr']].fillna(0).to_dict('records') if 'min_hr' in combined.columns else [],
-        'activity_timeline': combined[['date_str', 'walking_distance']].fillna(0).to_dict('records') if 'walking_distance' in combined.columns else [],
-        'sleep_debt': sleep_debt,
-        'seizure_markers': seizure_markers['date_str'].tolist() if not seizure_markers.empty and 'date_str' in seizure_markers.columns else []
-    }
-    
-    # Sleep stage ratios
-    if not sleep_df.empty and 'deep_ratio' in sleep_df.columns:
-        sleep_df['date_str'] = sleep_df['date'].astype(str)
-        result['sleep_ratios'] = sleep_df[['date_str', 'deep_ratio', 'rem_ratio', 'core_ratio']].to_dict('records')
-    else:
-        result['sleep_ratios'] = []
-    
-    return result
-
-def calculate_statistics(df):
-    """Calculate summary statistics"""
-    if df.empty:
-        return {}
-    
-    df_sorted = df.sort_values('timestamp')
-    
-    total_seizures = len(df)
-    date_range_days = (df_sorted['timestamp'].max() - df_sorted['timestamp'].min()).days + 1
-    avg_per_day = total_seizures / date_range_days if date_range_days > 0 else 0
-    avg_per_week = avg_per_day * 7
-    
-    avg_duration = df['duration_seconds'].mean()
-    min_duration = df['duration_seconds'].min()
-    max_duration = df['duration_seconds'].max()
-    
-    food_eaten_count = df[df['food_eaten'] == True].shape[0]
-    no_food_count = df[df['food_eaten'] == False].shape[0]
-    
-    period_count = df[df['period'] == True].shape[0]
-    non_period_count = df[df['period'] == False].shape[0]
-    
-    period_avg_duration = df[df['period'] == True]['duration_seconds'].mean() if period_count > 0 else 0
-    non_period_avg_duration = df[df['period'] == False]['duration_seconds'].mean() if non_period_count > 0 else 0
-    
-    last_7_days = df[df['timestamp'] >= datetime.now() - timedelta(days=7)]
-    recent_seizures = len(last_7_days)
+    avg_per_day = total_seizures / max(date_range_days, 1)
+    avg_per_week = (total_seizures / max(date_range_days, 1)) * 7
+    avg_per_month = (total_seizures / max(date_range_days, 1)) * 30.44
     
     return {
-        'total_seizures': total_seizures,
-        'date_range_days': date_range_days,
+        'total_seizures': int(total_seizures),
+        'first_record': first_record.strftime('%Y-%m-%d'),
+        'last_record': last_record.strftime('%Y-%m-%d'),
+        'date_range_days': int(date_range_days),
+        'recent_seizures_7_days': int(recent_7_days),
+        'recent_seizures_30_days': int(recent_30_days),
+        'avg_duration': int(avg_duration) if not pd.isna(avg_duration) else 0,
+        'min_duration': int(min_duration) if not pd.isna(min_duration) else 0,
+        'max_duration': int(max_duration) if not pd.isna(max_duration) else 0,
+        'food_eaten_count': int(food_eaten_count),
+        'no_food_count': int(no_food_count),
+        'period_related_count': int(period_related_count),
         'avg_per_day': round(avg_per_day, 2),
         'avg_per_week': round(avg_per_week, 2),
-        'avg_duration': round(avg_duration, 1),
-        'min_duration': int(min_duration),
-        'max_duration': int(max_duration),
-        'food_eaten_count': food_eaten_count,
-        'no_food_count': no_food_count,
-        'period_related_count': period_count,
-        'non_period_count': non_period_count,
-        'period_avg_duration': round(period_avg_duration, 1),
-        'non_period_avg_duration': round(non_period_avg_duration, 1),
-        'recent_seizures_7_days': recent_seizures,
-        'first_record': df_sorted['timestamp'].min().strftime('%Y-%m-%d'),
-        'last_record': df_sorted['timestamp'].max().strftime('%Y-%m-%d')
+        'avg_per_month': round(avg_per_month, 2)
     }
 
-def prepare_chart_data(df):
-    """Prepare data for charts"""
-    if df.empty:
+def generate_chart_data(seizure_df, pain_df, watch_df):
+    """Generate comprehensive chart data"""
+    if seizure_df.empty:
         return {}
     
-    df = df.sort_values('timestamp')
+    charts = {}
     
-    daily_freq = df.groupby(df['timestamp'].dt.date).size().reset_index()
-    daily_freq.columns = ['date', 'count']
-    daily_freq['date'] = daily_freq['date'].astype(str)
-    
-    hour_freq = df['hour_of_day'].value_counts().sort_index().reset_index()
-    hour_freq.columns = ['hour', 'count']
-    hour_freq['hour'] = hour_freq['hour'].astype(int)
-    
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    day_freq = df['day_of_week'].value_counts().reindex(day_order, fill_value=0).reset_index()
-    day_freq.columns = ['day', 'count']
-    
-    df['month'] = df['timestamp'].dt.to_period('M').astype(str)
-    monthly_freq = df.groupby('month').size().reset_index()
-    monthly_freq.columns = ['month', 'count']
-    
-    heatmap_data = df.groupby(['hour_of_day', 'day_of_week']).size().reset_index(name='count')
-    heatmap_pivot = pd.DataFrame(0, index=range(24), columns=day_order)
-    for _, row in heatmap_data.iterrows():
-        heatmap_pivot.loc[row['hour_of_day'], row['day_of_week']] = row['count']
-    
-    heatmap_formatted = []
-    for hour in range(24):
-        for day in day_order:
-            count = int(heatmap_pivot.loc[hour, day])
-            heatmap_formatted.append({
-                'hour': hour,
-                'day': day,
-                'count': count,
-                'day_index': day_order.index(day)
-            })
-    
-    duration_buckets = {
-        '45-75s': len(df[(df['duration_seconds'] >= 45) & (df['duration_seconds'] < 75)]),
-        '75-100s': len(df[(df['duration_seconds'] >= 75) & (df['duration_seconds'] < 100)]),
-        '100-125s': len(df[(df['duration_seconds'] >= 100) & (df['duration_seconds'] < 125)]),
-        '125-150s': len(df[(df['duration_seconds'] >= 125) & (df['duration_seconds'] < 150)]),
-        '150-200s': len(df[(df['duration_seconds'] >= 150) & (df['duration_seconds'] < 200)]),
-        '200+s': len(df[df['duration_seconds'] >= 200])
-    }
-    duration_distribution = [{'range': k, 'count': v} for k, v in duration_buckets.items()]
-    
-    df_sorted = df.sort_values('timestamp', ascending=True)
-    df_sorted['date_only'] = df_sorted['timestamp'].dt.date
-    seizure_dates = df_sorted['date_only'].unique()
-    
-    intervals = []
-    for i in range(1, len(seizure_dates)):
-        interval_days = (seizure_dates[i] - seizure_dates[i-1]).days
-        intervals.append(interval_days)
-    
-    time_between = []
-    for i, interval in enumerate(intervals):
-        time_between.append({
-            'seizure_number': i + 2,
-            'days_since_previous': interval,
-            'date': seizure_dates[i+1].strftime('%Y-%m-%d') if i+1 < len(seizure_dates) else ''
-        })
-    
-    duration_stats = {
-        'mean': round(df['duration_seconds'].mean(), 1),
-        'median': round(df['duration_seconds'].median(), 1),
-        'std': round(df['duration_seconds'].std(), 1),
-        'min': int(df['duration_seconds'].min()),
-        'max': int(df['duration_seconds'].max())
-    }
-    
-    food_eaten_durations = df[df['food_eaten'] == True]['duration_seconds'].mean()
-    no_food_durations = df[df['food_eaten'] == False]['duration_seconds'].mean()
-    
-    food_analysis = {
-        'food_eaten_avg': round(food_eaten_durations, 1) if not pd.isna(food_eaten_durations) else 0,
-        'no_food_avg': round(no_food_durations, 1) if not pd.isna(no_food_durations) else 0,
-        'food_eaten_count': int(df[df['food_eaten'] == True].shape[0]),
-        'no_food_count': int(df[df['food_eaten'] == False].shape[0])
-    }
-    
-    timeline_data = df.sort_values('timestamp', ascending=False)[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten', 'period']].copy()
+    # Timeline data
+    timeline_data = seizure_df[['timestamp', 'duration_seconds', 'food_eaten', 'period']].copy()
     timeline_data['timestamp'] = timeline_data['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
-    timeline_data['food_eaten'] = timeline_data['food_eaten'].astype(bool)
-    timeline_data['period'] = timeline_data['period'].astype(bool)
+    charts['timeline'] = timeline_data.to_dict('records')
     
-    return {
-        'daily_frequency': daily_freq.to_dict('records'),
-        'hour_frequency': hour_freq.to_dict('records'),
-        'day_frequency': day_freq.to_dict('records'),
-        'monthly_frequency': monthly_freq.to_dict('records'),
-        'heatmap': heatmap_formatted,
-        'duration_distribution': duration_distribution,
-        'time_between_seizures': time_between,
-        'duration_stats': duration_stats,
-        'food_analysis': food_analysis,
-        'timeline': timeline_data.to_dict('records')
+    # Hour of day analysis
+    hour_counts = seizure_df['hour_of_day'].value_counts().sort_index()
+    charts['hourly'] = {
+        'labels': [f"{h:02d}:00" for h in hour_counts.index],
+        'data': hour_counts.values.tolist()
     }
+    
+    # Day of week analysis
+    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    day_counts = seizure_df['day_of_week'].value_counts().reindex(day_order, fill_value=0)
+    charts['daily'] = {
+        'labels': day_counts.index.tolist(),
+        'data': day_counts.values.tolist()
+    }
+    
+    # Duration distribution
+    duration_bins = [0, 30, 60, 90, 120, 180, 300]
+    duration_labels = ['0-30s', '31-60s', '61-90s', '91-120s', '121-180s', '181-300s', '300s+']
+    duration_counts = pd.cut(seizure_df['duration_seconds'], bins=duration_bins + [float('inf')], 
+                           labels=duration_labels, include_lowest=True).value_counts()
+    charts['duration'] = {
+        'labels': duration_labels,
+        'data': [duration_counts.get(label, 0) for label in duration_labels]
+    }
+    
+    # Monthly trends
+    monthly_counts = seizure_df.groupby('month').size()
+    charts['monthly'] = {
+        'labels': [str(month) for month in monthly_counts.index],
+        'data': monthly_counts.values.tolist()
+    }
+    
+    # Time between seizures
+    seizure_df_sorted = seizure_df.sort_values('timestamp')
+    time_intervals = seizure_df_sorted['timestamp'].diff().dt.total_seconds() / 3600  # hours
+    time_intervals = time_intervals.dropna()
+    
+    if len(time_intervals) > 0:
+        interval_bins = [0, 24, 48, 72, 168, 720]  # hours
+        interval_labels = ['<24h', '24-48h', '48-72h', '3-7d', '1-30d', '>30d']
+        interval_counts = pd.cut(time_intervals, bins=interval_bins + [float('inf')], 
+                               labels=interval_labels, include_lowest=True).value_counts()
+        charts['time_intervals'] = {
+            'labels': interval_labels,
+            'data': [interval_counts.get(label, 0) for label in interval_labels]
+        }
+    else:
+        charts['time_intervals'] = {'labels': [], 'data': []}
+    
+    # Food correlation
+    food_data = seizure_df['food_eaten'].value_counts()
+    charts['food_correlation'] = {
+        'labels': ['With Food', 'Without Food'],
+        'data': [food_data.get(True, 0), food_data.get(False, 0)]
+    }
+    
+    # Heatmap data (hour x day of week)
+    heatmap_data = seizure_df.groupby(['day_of_week', 'hour_of_day']).size().reset_index(name='count')
+    
+    # Create matrix for heatmap
+    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    heatmap_matrix = []
+    for day in day_order:
+        day_data = heatmap_data[heatmap_data['day_of_week'] == day]
+        row = []
+        for hour in range(24):
+            count = day_data[day_data['hour_of_day'] == hour]['count'].sum()
+            row.append(count)
+        heatmap_matrix.append(row)
+    
+    charts['heatmap'] = {
+        'matrix': heatmap_matrix,
+        'days': day_order,
+        'hours': list(range(24))
+    }
+    
+    # Duration statistics
+    charts['duration_stats'] = {
+        'mean': int(seizure_df['duration_seconds'].mean()),
+        'median': int(seizure_df['duration_seconds'].median()),
+        'min': int(seizure_df['duration_seconds'].min()),
+        'max': int(seizure_df['duration_seconds'].max()),
+        'std': int(seizure_df['duration_seconds'].std())
+    }
+    
+    return charts
 
-def prepare_pain_chart_data(pain_df, seizure_df):
-    """Prepare pain tracking data with seizure markers"""
+def generate_health_insights(seizure_df, watch_df, pain_df):
+    """Generate comprehensive health insights"""
+    insights = {}
+    
+    if watch_df.empty:
+        return insights
+    
+    try:
+        # Sleep analysis
+        sleep_analysis = {}
+        
+        # Get sleep data for 3 days before each seizure
+        seizure_dates = seizure_df['date'].unique()
+        sleep_before_seizure = []
+        
+        for seizure_date in seizure_dates:
+            three_days_before = seizure_date - timedelta(days=3)
+            sleep_data = watch_df[watch_df['date'] >= three_days_before][
+                watch_df['date'] < seizure_date
+            ]['Sleep Analysis [Total] (hr)'].dropna()
+            
+            if len(sleep_data) > 0:
+                sleep_before_seizure.extend(sleep_data.tolist())
+        
+        if sleep_before_seizure:
+            sleep_analysis['before_seizure_avg_total'] = np.mean(sleep_before_seizure)
+            sleep_analysis['before_seizure_avg_deep'] = np.mean([
+                watch_df[watch_df['date'] >= seizure_date - timedelta(days=3)][
+                    watch_df['date'] < seizure_date
+                ]['Sleep Analysis [Deep] (hr)'].dropna()
+                for seizure_date in seizure_dates
+            ])
+        
+        # Baseline sleep (all available data)
+        baseline_sleep = watch_df['Sleep Analysis [Total] (hr)'].dropna()
+        if len(baseline_sleep) > 0:
+            sleep_analysis['baseline_avg_total'] = np.mean(baseline_sleep)
+            sleep_analysis['baseline_avg_deep'] = np.mean(watch_df['Sleep Analysis [Deep] (hr)'].dropna())
+            sleep_analysis['baseline_avg_rem'] = np.mean(watch_df['Sleep Analysis [REM] (hr)'].dropna())
+        
+        insights['sleep_analysis'] = sleep_analysis
+        
+        # Heart rate analysis
+        hr_analysis = {}
+        
+        # Heart rate on seizure days
+        seizure_day_hr = watch_df[watch_df['date'].isin(seizure_dates)]['Heart Rate [Min] (count/min)'].dropna()
+        if len(seizure_day_hr) > 0:
+            hr_analysis['seizure_day_min_hr'] = np.mean(seizure_day_hr)
+        
+        # Baseline heart rate
+        baseline_hr = watch_df['Heart Rate [Min] (count/min)'].dropna()
+        if len(baseline_hr) > 0:
+            hr_analysis['baseline_min_hr'] = np.mean(baseline_hr)
+        
+        insights['heart_rate_analysis'] = hr_analysis
+        
+        # Activity analysis
+        activity_analysis = {}
+        
+        # Activity before seizures
+        activity_before_seizure = []
+        for seizure_date in seizure_dates:
+            three_days_before = seizure_date - timedelta(days=3)
+            activity_data = watch_df[watch_df['date'] >= three_days_before][
+                watch_df['date'] < seizure_date
+            ]['Walking + Running Distance (mi)'].dropna()
+            
+            if len(activity_data) > 0:
+                activity_before_seizure.extend(activity_data.tolist())
+        
+        if activity_before_seizure:
+            activity_analysis['before_seizure_avg_distance'] = np.mean(activity_before_seizure)
+        
+        # Baseline activity
+        baseline_activity = watch_df['Walking + Running Distance (mi)'].dropna()
+        if len(baseline_activity) > 0:
+            activity_analysis['baseline_avg_distance'] = np.mean(baseline_activity)
+        
+        insights['activity_analysis'] = activity_analysis
+        
+    except Exception as e:
+        logger.error(f"Error generating health insights: {e}")
+    
+    return insights
+
+def generate_health_charts(watch_df, seizure_df):
+    """Generate health-related charts"""
+    if watch_df.empty:
+        return {}
+    
+    charts = {}
+    
+    try:
+        # Sleep comparison chart
+        sleep_data = watch_df[['date', 'Sleep Analysis [Total] (hr)', 'Sleep Analysis [Deep] (hr)', 
+                              'Sleep Analysis [REM] (hr)']].dropna()
+        
+        if len(sleep_data) > 0:
+            charts['sleep_trend'] = {
+                'dates': [d.strftime('%Y-%m-%d') for d in sleep_data['date']],
+                'total_sleep': sleep_data['Sleep Analysis [Total] (hr)'].tolist(),
+                'deep_sleep': sleep_data['Sleep Analysis [Deep] (hr)'].tolist(),
+                'rem_sleep': sleep_data['Sleep Analysis [REM] (hr)'].tolist()
+            }
+        
+        # Heart rate trend
+        hr_data = watch_df[['date', 'Heart Rate [Min] (count/min)', 'Heart Rate [Max] (count/min)', 
+                           'Heart Rate [Avg] (count/min)']].dropna()
+        
+        if len(hr_data) > 0:
+            charts['heart_rate_trend'] = {
+                'dates': [d.strftime('%Y-%m-%d') for d in hr_data['date']],
+                'min_hr': hr_data['Heart Rate [Min] (count/min)'].tolist(),
+                'max_hr': hr_data['Heart Rate [Max] (count/min)'].tolist(),
+                'avg_hr': hr_data['Heart Rate [Avg] (count/min)'].tolist()
+            }
+        
+        # Activity trend
+        activity_data = watch_df[['date', 'Walking + Running Distance (mi)']].dropna()
+        
+        if len(activity_data) > 0:
+            charts['activity_trend'] = {
+                'dates': [d.strftime('%Y-%m-%d') for d in activity_data['date']],
+                'distance': activity_data['Walking + Running Distance (mi)'].tolist()
+            }
+        
+    except Exception as e:
+        logger.error(f"Error generating health charts: {e}")
+    
+    return charts
+
+def generate_pain_charts(pain_df, seizure_df):
+    """Generate pain tracking charts with seizure correlation"""
     if pain_df.empty:
-        return {'pain_timeline': [], 'seizure_markers': []}
+        return {}
     
-    pain_df = pain_df.sort_values('timestamp')
-    first_pain_timestamp = pain_df['timestamp'].min()
-    seizures_after_pain = seizure_df[seizure_df['timestamp'] >= first_pain_timestamp].copy()
+    charts = {}
     
-    pain_timeline = []
-    for _, row in pain_df.iterrows():
-        pain_timeline.append({
-            'timestamp': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-            'pain': int(row['Pain'])
-        })
+    try:
+        # Pain trend over time
+        pain_data = pain_df.sort_values('timestamp')
+        charts['pain_timeline'] = {
+            'dates': [d.strftime('%Y-%m-%d %H:%M') for d in pain_data['timestamp']],
+            'pain_levels': pain_data['Pain'].tolist()
+        }
+        
+        # Pain distribution
+        pain_counts = pain_data['Pain'].value_counts().sort_index()
+        charts['pain_distribution'] = {
+            'levels': pain_counts.index.tolist(),
+            'counts': pain_counts.values.tolist()
+        }
+        
+        # Correlation with seizures
+        if not seizure_df.empty:
+            # Find pain levels within 24 hours of seizures
+            pain_near_seizures = []
+            for _, seizure in seizure_df.iterrows():
+                seizure_time = seizure['timestamp']
+                nearby_pain = pain_df[
+                    (pain_df['timestamp'] >= seizure_time - timedelta(hours=24)) &
+                    (pain_df['timestamp'] <= seizure_time + timedelta(hours=24))
+                ]['Pain'].tolist()
+                pain_near_seizures.extend(nearby_pain)
+            
+            if pain_near_seizures:
+                charts['pain_seizure_correlation'] = {
+                    'pain_near_seizures': pain_near_seizures,
+                    'avg_pain_near_seizures': np.mean(pain_near_seizures),
+                    'overall_avg_pain': np.mean(pain_data['Pain'])
+                }
+        
+    except Exception as e:
+        logger.error(f"Error generating pain charts: {e}")
     
-    seizure_markers = []
-    for _, row in seizures_after_pain.iterrows():
-        seizure_markers.append({
-            'timestamp': row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-        })
-    
-    return {
-        'pain_timeline': pain_timeline,
-        'seizure_markers': seizure_markers
-    }
+    return charts
 
 @app.route('/')
 def dashboard():
+    """Render the main dashboard"""
     return render_template('dashboard.html')
 
 @app.route('/api/data')
-def get_data():
-    seizure_df = load_seizure_data()
-    pain_df = load_pain_data()
-    watch_df = load_apple_watch_data()
-    
-    stats = calculate_statistics(seizure_df)
-    charts = prepare_chart_data(seizure_df)
-    pain_charts = prepare_pain_chart_data(pain_df, seizure_df)
-    
-    # New health insights
-    health_insights = {}
-    health_charts = {}
-    
-    if not watch_df.empty:
-        health_insights['sleep_analysis'] = analyze_sleep_before_seizures(seizure_df, watch_df)
-        health_insights['heart_rate_analysis'] = analyze_heart_rate_trends(seizure_df, watch_df)
-        health_insights['activity_analysis'] = analyze_activity_correlation(seizure_df, watch_df)
-        health_charts = prepare_health_chart_data(seizure_df, watch_df)
-    
-    return jsonify({
-        'statistics': stats,
-        'charts': charts,
-        'pain_charts': pain_charts,
-        'health_insights': health_insights,
-        'health_charts': health_charts,
-        'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    })
+def api_data():
+    """API endpoint for dashboard data"""
+    try:
+        # Load all data (clear cache to get fresh data)
+        seizure_df = load_seizure_data()
+        pain_df = load_pain_data()
+        watch_df = load_apple_watch_data()
+        
+        logger.info(f"Loaded seizure data: {len(seizure_df)} records")
+        logger.info(f"Loaded pain data: {len(pain_df)} records")
+        logger.info(f"Loaded watch data: {len(watch_df)} records")
+        
+        # Generate comprehensive data
+        statistics = calculate_statistics(seizure_df)
+        charts = generate_chart_data(seizure_df, pain_df, watch_df)
+        health_insights = generate_health_insights(seizure_df, watch_df, pain_df)
+        health_charts = generate_health_charts(watch_df, seizure_df)
+        pain_charts = generate_pain_charts(pain_df, seizure_df)
+        
+        response_data = {
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'statistics': statistics,
+            'charts': charts,
+            'health_insights': health_insights,
+            'health_charts': health_charts,
+            'pain_charts': pain_charts,
+            'data_summary': {
+                'seizure_records': len(seizure_df),
+                'pain_records': len(pain_df),
+                'apple_watch_records': len(watch_df),
+                'date_range': {
+                    'start': seizure_df['timestamp'].min().strftime('%Y-%m-%d') if not seizure_df.empty else None,
+                    'end': seizure_df['timestamp'].max().strftime('%Y-%m-%d') if not seizure_df.empty else None
+                }
+            }
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in API endpoint: {e}")
+        return jsonify({
+            'error': str(e),
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'statistics': {},
+            'charts': {},
+            'health_insights': {},
+            'health_charts': {},
+            'pain_charts': {},
+            'data_summary': {}
+        }), 500
 
 @app.route('/api/export')
 def export_data():
     """Export seizure data as CSV"""
     try:
-        df = load_seizure_data()
-        if df.empty:
-            return jsonify({'error': 'No data to export'}), 400
+        seizure_df = load_seizure_data()
+        if seizure_df.empty:
+            return jsonify({'error': 'No data to export'}), 404
         
-        df = df.sort_values('timestamp', ascending=True)
-        export_df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'food_eaten', 'period']].copy()
-        export_df.columns = ['DateTime', 'Duration (seconds)', 'Hour of Day', 'Day of Week', 'Food Eaten', 'During Period']
-        csv_string = export_df.to_csv(index=False)
+        # Prepare export data
+        export_df = seizure_df.copy()
+        export_df['timestamp'] = export_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        export_df['date'] = export_df['date'].astype(str)
         
-        return csv_string, 200, {
-            'Content-Disposition': 'attachment; filename="kylie_seizure_data.csv"',
-            'Content-Type': 'text/csv'
-        }
+        # Convert to CSV
+        csv_data = export_df.to_csv(index=False)
+        
+        response = app.response_class(
+            csv_data,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=seizure_data_export.csv',
+                'Cache-Control': 'no-cache'
+            }
+        )
+        return response
+        
     except Exception as e:
+        logger.error(f"Error exporting data: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/health')
+def health_page():
+    """Health insights page"""
+    return render_template('health.html')
+
+@app.route('/analytics')
+def analytics_page():
+    """Advanced analytics page"""
+    return render_template('analytics.html')
+
+@app.route('/settings')
+def settings_page():
+    """Settings page"""
+    return render_template('settings.html')
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('error.html', error_code=404, message="Page not found"), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('error.html', error_code=500, message="Internal server error"), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Create data directory and copy files if needed
+    if not os.path.exists(SEIZURES_CSV) and os.path.exists('/mnt/okcomputer/upload/seizures.csv'):
+        import shutil
+        shutil.copy('/mnt/okcomputer/upload/seizures.csv', SEIZURES_CSV)
+        shutil.copy('/mnt/okcomputer/upload/pain.csv', PAIN_CSV)
+        shutil.copy('/mnt/okcomputer/upload/appleWatchData.csv', APPLE_WATCH_CSV)
+        logger.info("Copied data files to output directory")
+    
+    app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
