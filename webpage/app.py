@@ -34,28 +34,88 @@ print(f"[WEBPAGE] SEIZURES_CSV: {SEIZURES_CSV} (exists: {os.path.exists(SEIZURES
 print(f"[WEBPAGE] PAIN_CSV: {PAIN_CSV} (exists: {os.path.exists(PAIN_CSV)})")
 print(f"[WEBPAGE] APPLE_WATCH_CSV: {APPLE_WATCH_CSV} (exists: {os.path.exists(APPLE_WATCH_CSV)})")
 
-def load_apple_watch_data():
-    """Load and process Apple Watch data from CSV file"""
+def safe_float(value, default=0.0):
+    """Safely convert value to float, handling NaN and empty strings"""
     try:
-        df = pd.read_csv(APPLE_WATCH_CSV)
+        if pd.isna(value) or value == '' or value is None:
+            return default
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def load_apple_watch_data():
+    """Load and process Apple Watch data from CSV file with robust error handling"""
+    try:
+        if not os.path.exists(APPLE_WATCH_CSV):
+            print(f"[WATCH] Apple Watch CSV not found at {APPLE_WATCH_CSV}")
+            return pd.DataFrame()
+            
+        # Read CSV with proper handling of empty values
+        df = pd.read_csv(APPLE_WATCH_CSV, na_values=['', ' ', 'NA', 'N/A'])
         df.columns = df.columns.str.strip()
+        
+        print(f"[WATCH] Loaded {len(df)} rows from Apple Watch CSV")
+        print(f"[WATCH] Columns: {df.columns.tolist()}")
         
         # Parse timestamp
         df['timestamp'] = pd.to_datetime(df['Date/Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+        
+        # Drop rows with invalid timestamps
+        initial_count = len(df)
         df = df.dropna(subset=['timestamp'])
+        dropped_count = initial_count - len(df)
+        if dropped_count > 0:
+            print(f"[WATCH] Dropped {dropped_count} rows with invalid timestamps")
+        
         df = df.sort_values('timestamp', ascending=True)
         
         # Extract date for daily aggregation
         df['date'] = df['timestamp'].dt.date
         
+        # Convert numeric columns, replacing empty strings with NaN first
+        numeric_columns = [
+            'Heart Rate [Min] (count/min)',
+            'Heart Rate [Max] (count/min)',
+            'Heart Rate [Avg] (count/min)',
+            'Sleep Analysis [Total] (hr)',
+            'Sleep Analysis [Asleep] (hr)',
+            'Sleep Analysis [In Bed] (hr)',
+            'Sleep Analysis [Core] (hr)',
+            'Sleep Analysis [Deep] (hr)',
+            'Sleep Analysis [REM] (hr)',
+            'Sleep Analysis [Awake] (hr)',
+            'Walking + Running Distance (mi)'
+        ]
+        
+        for col in numeric_columns:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        print(f"[WATCH] Successfully processed {len(df)} rows")
+        
+        # Debug: Check sleep data availability
+        sleep_col = 'Sleep Analysis [Total] (hr)'
+        if sleep_col in df.columns:
+            non_null_sleep = df[sleep_col].notna().sum()
+            print(f"[WATCH] Non-null sleep records: {non_null_sleep}")
+            if non_null_sleep > 0:
+                print(f"[WATCH] Sample sleep values: {df[df[sleep_col].notna()][sleep_col].head().tolist()}")
+        
         return df
+        
     except Exception as e:
-        print(f"Error loading Apple Watch data: {e}")
+        print(f"[WATCH] Error loading Apple Watch data: {e}")
+        import traceback
+        traceback.print_exc()
         return pd.DataFrame()
 
 def load_pain_data():
     """Load and process pain data from CSV file"""
     try:
+        if not os.path.exists(PAIN_CSV):
+            print(f"[PAIN] Pain CSV not found at {PAIN_CSV}")
+            return pd.DataFrame()
+            
         df = pd.read_csv(PAIN_CSV)
         df.columns = df.columns.str.strip()
         
@@ -64,18 +124,28 @@ def load_pain_data():
         df = df.sort_values('timestamp', ascending=True)
         df = df[['timestamp', 'Pain']]
         
+        # Convert pain to numeric
+        df['Pain'] = pd.to_numeric(df['Pain'], errors='coerce')
+        df = df.dropna(subset=['Pain'])
+        
+        print(f"[PAIN] Loaded {len(df)} pain records")
         return df
+        
     except Exception as e:
-        print(f"Error loading pain data: {e}")
+        print(f"[PAIN] Error loading pain data: {e}")
         return pd.DataFrame()
 
 def load_seizure_data():
     """Load and process seizure data from CSV file"""
     try:
+        if not os.path.exists(SEIZURES_CSV):
+            print(f"[SEIZURE] Seizure CSV not found at {SEIZURES_CSV}")
+            return pd.DataFrame()
+            
         df = pd.read_csv(SEIZURES_CSV)
         
         df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-        df['duration_seconds'] = df['Duration']
+        df['duration_seconds'] = pd.to_numeric(df['Duration'], errors='coerce')
         df['hour_of_day'] = df['timestamp'].dt.hour
         df['day_of_week'] = df['timestamp'].dt.day_name()
         df['date'] = df['timestamp'].dt.date
@@ -83,52 +153,100 @@ def load_seizure_data():
         df['period'] = df['Peiod'].astype(str).str.lower() == 'true'
         
         df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten', 'period']]
-        df = df.dropna(subset=['timestamp'])
+        df = df.dropna(subset=['timestamp', 'duration_seconds'])
         df = df.sort_values('timestamp', ascending=False)
         
+        print(f"[SEIZURE] Loaded {len(df)} seizure records")
         return df
+        
     except Exception as e:
-        print(f"Error loading data: {e}")
+        print(f"[SEIZURE] Error loading seizure data: {e}")
+        import traceback
+        traceback.print_exc()
         return pd.DataFrame()
 
 def get_daily_sleep_metrics(watch_df):
     """Aggregate sleep metrics by date from hourly Apple Watch data"""
     if watch_df.empty:
+        print("[SLEEP] No watch data available")
         return pd.DataFrame()
     
     # Sleep data appears at midnight (00:00:00) each day
     sleep_data = watch_df[watch_df['timestamp'].dt.hour == 0].copy()
     
     if sleep_data.empty:
+        print("[SLEEP] No midnight sleep records found")
+        return pd.DataFrame()
+    
+    print(f"[SLEEP] Found {len(sleep_data)} midnight records")
+    
+    # Check if required columns exist
+    required_cols = [
+        'Sleep Analysis [Total] (hr)',
+        'Sleep Analysis [Deep] (hr)',
+        'Sleep Analysis [REM] (hr)',
+        'Sleep Analysis [Core] (hr)',
+        'Sleep Analysis [Awake] (hr)'
+    ]
+    
+    missing_cols = [col for col in required_cols if col not in sleep_data.columns]
+    if missing_cols:
+        print(f"[SLEEP] Missing columns: {missing_cols}")
         return pd.DataFrame()
     
     sleep_metrics = []
     for _, row in sleep_data.iterrows():
-        date = row['date']
+        # Only include rows with valid sleep data
+        total_sleep = safe_float(row.get('Sleep Analysis [Total] (hr)'))
+        
+        # Skip rows with no sleep data
+        if total_sleep <= 0:
+            continue
+            
         metrics = {
-            'date': date,
-            'total_sleep': row.get('Sleep Analysis [Total] (hr)', 0),
-            'deep_sleep': row.get('Sleep Analysis [Deep] (hr)', 0),
-            'rem_sleep': row.get('Sleep Analysis [REM] (hr)', 0),
-            'core_sleep': row.get('Sleep Analysis [Core] (hr)', 0),
-            'awake_time': row.get('Sleep Analysis [Awake] (hr)', 0)
+            'date': row['date'],
+            'total_sleep': total_sleep,
+            'deep_sleep': safe_float(row.get('Sleep Analysis [Deep] (hr)')),
+            'rem_sleep': safe_float(row.get('Sleep Analysis [REM] (hr)')),
+            'core_sleep': safe_float(row.get('Sleep Analysis [Core] (hr)')),
+            'awake_time': safe_float(row.get('Sleep Analysis [Awake] (hr)'))
         }
         sleep_metrics.append(metrics)
     
-    return pd.DataFrame(sleep_metrics)
+    result_df = pd.DataFrame(sleep_metrics)
+    print(f"[SLEEP] Extracted {len(result_df)} valid sleep records")
+    
+    if not result_df.empty:
+        print(f"[SLEEP] Date range: {result_df['date'].min()} to {result_df['date'].max()}")
+        print(f"[SLEEP] Avg total sleep: {result_df['total_sleep'].mean():.2f}h")
+    
+    return result_df
 
 def get_daily_heart_rate_metrics(watch_df):
     """Aggregate heart rate metrics by date"""
     if watch_df.empty:
         return pd.DataFrame()
     
-    daily_hr = watch_df.groupby('date').agg({
+    # Filter out rows where all HR values are NaN
+    hr_cols = ['Heart Rate [Min] (count/min)', 'Heart Rate [Max] (count/min)', 'Heart Rate [Avg] (count/min)']
+    watch_df_hr = watch_df.dropna(subset=hr_cols, how='all')
+    
+    if watch_df_hr.empty:
+        print("[HR] No heart rate data available")
+        return pd.DataFrame()
+    
+    daily_hr = watch_df_hr.groupby('date').agg({
         'Heart Rate [Min] (count/min)': 'min',
         'Heart Rate [Max] (count/min)': 'max',
         'Heart Rate [Avg] (count/min)': 'mean'
     }).reset_index()
     
     daily_hr.columns = ['date', 'min_hr', 'max_hr', 'avg_hr']
+    
+    # Remove rows where all values are still NaN
+    daily_hr = daily_hr.dropna(subset=['min_hr', 'max_hr', 'avg_hr'], how='all')
+    
+    print(f"[HR] Extracted {len(daily_hr)} days of heart rate data")
     return daily_hr
 
 def get_daily_activity_metrics(watch_df):
@@ -136,24 +254,41 @@ def get_daily_activity_metrics(watch_df):
     if watch_df.empty:
         return pd.DataFrame()
     
-    daily_activity = watch_df.groupby('date').agg({
-        'Walking + Running Distance (mi)': 'sum'
+    activity_col = 'Walking + Running Distance (mi)'
+    if activity_col not in watch_df.columns:
+        print("[ACTIVITY] Walking distance column not found")
+        return pd.DataFrame()
+    
+    # Filter out rows where activity is NaN
+    watch_df_activity = watch_df.dropna(subset=[activity_col])
+    
+    if watch_df_activity.empty:
+        print("[ACTIVITY] No activity data available")
+        return pd.DataFrame()
+    
+    daily_activity = watch_df_activity.groupby('date').agg({
+        activity_col: 'sum'
     }).reset_index()
     
     daily_activity.columns = ['date', 'walking_distance']
+    
+    print(f"[ACTIVITY] Extracted {len(daily_activity)} days of activity data")
     return daily_activity
 
 def analyze_sleep_before_seizures(seizure_df, watch_df):
     """Compare sleep metrics on days before seizures vs baseline"""
     if seizure_df.empty or watch_df.empty:
+        print("[ANALYSIS] Missing seizure or watch data")
         return {}
     
     sleep_df = get_daily_sleep_metrics(watch_df)
     if sleep_df.empty:
+        print("[ANALYSIS] No sleep data available for analysis")
         return {}
     
     # Get unique seizure dates
     seizure_dates = set(seizure_df['date'].unique())
+    print(f"[ANALYSIS] Analyzing sleep before {len(seizure_dates)} seizure days")
     
     # Analyze sleep 1-3 days before seizures
     sleep_before_seizures = []
@@ -174,6 +309,7 @@ def analyze_sleep_before_seizures(seizure_df, watch_df):
             baseline_sleep.append(sleep_row)
     
     if not sleep_before_seizures:
+        print("[ANALYSIS] No sleep data found 1-3 days before seizures")
         return {}
     
     # Calculate averages
@@ -195,6 +331,10 @@ def analyze_sleep_before_seizures(seizure_df, watch_df):
             'baseline_count': len(baseline_df)
         })
     
+    print(f"[ANALYSIS] Sleep before seizures: {result['before_seizure_avg_total']:.2f}h")
+    if 'baseline_avg_total' in result:
+        print(f"[ANALYSIS] Baseline sleep: {result['baseline_avg_total']:.2f}h")
+    
     return result
 
 def calculate_sleep_debt(watch_df, target_hours=7.5):
@@ -208,11 +348,18 @@ def calculate_sleep_debt(watch_df, target_hours=7.5):
     
     sleep_df = sleep_df.sort_values('date')
     sleep_df['sleep_deficit'] = target_hours - sleep_df['total_sleep']
+    
+    # Calculate rolling debt with minimum periods
     sleep_df['cumulative_debt_3day'] = sleep_df['sleep_deficit'].rolling(window=3, min_periods=1).sum()
     sleep_df['cumulative_debt_7day'] = sleep_df['sleep_deficit'].rolling(window=7, min_periods=1).sum()
+    
+    # Convert date to string for JSON serialization
     sleep_df['date'] = sleep_df['date'].astype(str)
     
-    return sleep_df[['date', 'total_sleep', 'sleep_deficit', 'cumulative_debt_3day', 'cumulative_debt_7day']].to_dict('records')
+    result = sleep_df[['date', 'total_sleep', 'sleep_deficit', 'cumulative_debt_3day', 'cumulative_debt_7day']].to_dict('records')
+    print(f"[SLEEP DEBT] Calculated debt for {len(result)} days")
+    
+    return result
 
 def analyze_heart_rate_trends(seizure_df, watch_df):
     """Analyze heart rate patterns around seizure days"""
@@ -221,6 +368,7 @@ def analyze_heart_rate_trends(seizure_df, watch_df):
     
     hr_df = get_daily_heart_rate_metrics(watch_df)
     if hr_df.empty:
+        print("[HR ANALYSIS] No heart rate data for analysis")
         return {}
     
     seizure_dates = set(seizure_df['date'].unique())
@@ -237,11 +385,13 @@ def analyze_heart_rate_trends(seizure_df, watch_df):
         result['seizure_day_min_hr'] = float(seizure_hr['min_hr'].mean())
         result['seizure_day_avg_hr'] = float(seizure_hr['avg_hr'].mean())
         result['seizure_day_max_hr'] = float(seizure_hr['max_hr'].mean())
+        print(f"[HR ANALYSIS] Seizure day avg HR: {result['seizure_day_avg_hr']:.1f} bpm")
     
     if not baseline_hr.empty:
         result['baseline_min_hr'] = float(baseline_hr['min_hr'].mean())
         result['baseline_avg_hr'] = float(baseline_hr['avg_hr'].mean())
         result['baseline_max_hr'] = float(baseline_hr['max_hr'].mean())
+        print(f"[HR ANALYSIS] Baseline avg HR: {result['baseline_avg_hr']:.1f} bpm")
     
     return result
 
@@ -252,6 +402,7 @@ def analyze_activity_correlation(seizure_df, watch_df):
     
     activity_df = get_daily_activity_metrics(watch_df)
     if activity_df.empty:
+        print("[ACTIVITY ANALYSIS] No activity data for analysis")
         return {}
     
     seizure_dates = set(seizure_df['date'].unique())
@@ -277,71 +428,131 @@ def analyze_activity_correlation(seizure_df, watch_df):
     
     if activity_before_seizures:
         result['before_seizure_avg_distance'] = float(np.mean(activity_before_seizures))
+        print(f"[ACTIVITY ANALYSIS] Activity before seizures: {result['before_seizure_avg_distance']:.2f} mi")
     
     if baseline_activity:
         result['baseline_avg_distance'] = float(np.mean(baseline_activity))
+        print(f"[ACTIVITY ANALYSIS] Baseline activity: {result['baseline_avg_distance']:.2f} mi")
     
     return result
 
 def prepare_health_chart_data(seizure_df, watch_df):
     """Prepare chart data for new health metrics"""
     if watch_df.empty:
+        print("[HEALTH CHARTS] No watch data available")
         return {}
     
     sleep_df = get_daily_sleep_metrics(watch_df)
     hr_df = get_daily_heart_rate_metrics(watch_df)
     activity_df = get_daily_activity_metrics(watch_df)
     
-    # Merge all metrics by date
-    combined = sleep_df.copy() if not sleep_df.empty else pd.DataFrame()
+    # Start with the dataframe that has the most data
+    combined = pd.DataFrame()
     
-    if not hr_df.empty and not combined.empty:
-        combined = combined.merge(hr_df, on='date', how='outer')
-    elif not hr_df.empty:
-        combined = hr_df.copy()
+    if not sleep_df.empty:
+        combined = sleep_df.copy()
+        print(f"[HEALTH CHARTS] Starting with {len(combined)} sleep records")
     
-    if not activity_df.empty and not combined.empty:
-        combined = combined.merge(activity_df, on='date', how='outer')
-    elif not activity_df.empty:
-        combined = activity_df.copy()
+    if not hr_df.empty:
+        if combined.empty:
+            combined = hr_df.copy()
+            print(f"[HEALTH CHARTS] Starting with {len(combined)} HR records")
+        else:
+            combined = combined.merge(hr_df, on='date', how='outer')
+            print(f"[HEALTH CHARTS] After HR merge: {len(combined)} records")
+    
+    if not activity_df.empty:
+        if combined.empty:
+            combined = activity_df.copy()
+            print(f"[HEALTH CHARTS] Starting with {len(combined)} activity records")
+        else:
+            combined = combined.merge(activity_df, on='date', how='outer')
+            print(f"[HEALTH CHARTS] After activity merge: {len(combined)} records")
     
     if combined.empty:
+        print("[HEALTH CHARTS] No combined data available")
         return {}
     
     combined = combined.sort_values('date')
     combined['date_str'] = combined['date'].astype(str)
     
     # Mark seizure days
+    seizure_markers = []
     if not seizure_df.empty:
         seizure_dates = set(seizure_df['date'].unique())
         combined['has_seizure'] = combined['date'].apply(lambda d: d in seizure_dates)
-        seizure_markers = combined[combined['has_seizure']].copy()
-    else:
-        seizure_markers = pd.DataFrame()
+        seizure_markers = combined[combined['has_seizure']]['date_str'].tolist()
+        print(f"[HEALTH CHARTS] Marked {len(seizure_markers)} seizure days")
     
     # Sleep debt calculation
     sleep_debt = calculate_sleep_debt(watch_df)
     
-    # Sleep stage ratios
-    if not sleep_df.empty and 'total_sleep' in sleep_df.columns:
-        sleep_df['deep_ratio'] = (sleep_df['deep_sleep'] / sleep_df['total_sleep'] * 100).fillna(0)
-        sleep_df['rem_ratio'] = (sleep_df['rem_sleep'] / sleep_df['total_sleep'] * 100).fillna(0)
-        sleep_df['core_ratio'] = (sleep_df['core_sleep'] / sleep_df['total_sleep'] * 100).fillna(0)
-    
+    # Prepare result with safe data extraction
     result = {
-        'sleep_timeline': combined[['date_str', 'total_sleep', 'deep_sleep', 'rem_sleep']].fillna(0).to_dict('records') if 'total_sleep' in combined.columns else [],
-        'hr_timeline': combined[['date_str', 'min_hr', 'avg_hr', 'max_hr']].fillna(0).to_dict('records') if 'min_hr' in combined.columns else [],
-        'activity_timeline': combined[['date_str', 'walking_distance']].fillna(0).to_dict('records') if 'walking_distance' in combined.columns else [],
-        'sleep_debt': sleep_debt,
-        'seizure_markers': seizure_markers['date_str'].tolist() if not seizure_markers.empty and 'date_str' in seizure_markers.columns else []
+        'seizure_markers': seizure_markers
     }
     
+    # Sleep timeline
+    if not sleep_df.empty and all(col in combined.columns for col in ['total_sleep', 'deep_sleep', 'rem_sleep']):
+        sleep_timeline = combined[['date_str', 'total_sleep', 'deep_sleep', 'rem_sleep']].dropna(
+            subset=['total_sleep']
+        ).fillna(0).to_dict('records')
+        result['sleep_timeline'] = sleep_timeline
+        print(f"[HEALTH CHARTS] Sleep timeline: {len(sleep_timeline)} records")
+    else:
+        result['sleep_timeline'] = []
+        print("[HEALTH CHARTS] No sleep timeline data")
+    
+    # HR timeline
+    if not hr_df.empty and all(col in combined.columns for col in ['min_hr', 'avg_hr', 'max_hr']):
+        hr_timeline = combined[['date_str', 'min_hr', 'avg_hr', 'max_hr']].dropna(
+            subset=['avg_hr']
+        ).fillna(0).to_dict('records')
+        result['hr_timeline'] = hr_timeline
+        print(f"[HEALTH CHARTS] HR timeline: {len(hr_timeline)} records")
+    else:
+        result['hr_timeline'] = []
+        print("[HEALTH CHARTS] No HR timeline data")
+    
+    # Activity timeline
+    if not activity_df.empty and 'walking_distance' in combined.columns:
+        activity_timeline = combined[['date_str', 'walking_distance']].dropna(
+            subset=['walking_distance']
+        ).fillna(0).to_dict('records')
+        result['activity_timeline'] = activity_timeline
+        print(f"[HEALTH CHARTS] Activity timeline: {len(activity_timeline)} records")
+    else:
+        result['activity_timeline'] = []
+        print("[HEALTH CHARTS] No activity timeline data")
+    
+    # Sleep debt
+    result['sleep_debt'] = sleep_debt
+    
     # Sleep stage ratios
-    if not sleep_df.empty and 'deep_ratio' in sleep_df.columns:
-        sleep_df['date_str'] = sleep_df['date'].astype(str)
-        result['sleep_ratios'] = sleep_df[['date_str', 'deep_ratio', 'rem_ratio', 'core_ratio']].to_dict('records')
+    if not sleep_df.empty:
+        sleep_ratios_df = sleep_df.copy()
+        # Only calculate ratios where total_sleep > 0
+        valid_sleep = sleep_ratios_df['total_sleep'] > 0
+        sleep_ratios_df.loc[valid_sleep, 'deep_ratio'] = (
+            sleep_ratios_df.loc[valid_sleep, 'deep_sleep'] / 
+            sleep_ratios_df.loc[valid_sleep, 'total_sleep'] * 100
+        )
+        sleep_ratios_df.loc[valid_sleep, 'rem_ratio'] = (
+            sleep_ratios_df.loc[valid_sleep, 'rem_sleep'] / 
+            sleep_ratios_df.loc[valid_sleep, 'total_sleep'] * 100
+        )
+        sleep_ratios_df.loc[valid_sleep, 'core_ratio'] = (
+            sleep_ratios_df.loc[valid_sleep, 'core_sleep'] / 
+            sleep_ratios_df.loc[valid_sleep, 'total_sleep'] * 100
+        )
+        
+        sleep_ratios_df['date_str'] = sleep_ratios_df['date'].astype(str)
+        sleep_ratios = sleep_ratios_df[['date_str', 'deep_ratio', 'rem_ratio', 'core_ratio']].dropna().fillna(0).to_dict('records')
+        result['sleep_ratios'] = sleep_ratios
+        print(f"[HEALTH CHARTS] Sleep ratios: {len(sleep_ratios)} records")
     else:
         result['sleep_ratios'] = []
+        print("[HEALTH CHARTS] No sleep ratio data")
     
     return result
 
@@ -527,32 +738,58 @@ def dashboard():
 
 @app.route('/api/data')
 def get_data():
-    seizure_df = load_seizure_data()
-    pain_df = load_pain_data()
-    watch_df = load_apple_watch_data()
+    print("\n[API] ===== Starting data load =====")
     
-    stats = calculate_statistics(seizure_df)
-    charts = prepare_chart_data(seizure_df)
-    pain_charts = prepare_pain_chart_data(pain_df, seizure_df)
-    
-    # New health insights
-    health_insights = {}
-    health_charts = {}
-    
-    if not watch_df.empty:
-        health_insights['sleep_analysis'] = analyze_sleep_before_seizures(seizure_df, watch_df)
-        health_insights['heart_rate_analysis'] = analyze_heart_rate_trends(seizure_df, watch_df)
-        health_insights['activity_analysis'] = analyze_activity_correlation(seizure_df, watch_df)
-        health_charts = prepare_health_chart_data(seizure_df, watch_df)
-    
-    return jsonify({
-        'statistics': stats,
-        'charts': charts,
-        'pain_charts': pain_charts,
-        'health_insights': health_insights,
-        'health_charts': health_charts,
-        'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    })
+    try:
+        seizure_df = load_seizure_data()
+        pain_df = load_pain_data()
+        watch_df = load_apple_watch_data()
+        
+        print(f"[API] Data loaded - Seizures: {len(seizure_df)}, Pain: {len(pain_df)}, Watch: {len(watch_df)}")
+        
+        stats = calculate_statistics(seizure_df)
+        charts = prepare_chart_data(seizure_df)
+        pain_charts = prepare_pain_chart_data(pain_df, seizure_df)
+        
+        # New health insights
+        health_insights = {}
+        health_charts = {}
+        
+        if not watch_df.empty:
+            print("[API] Calculating health insights...")
+            health_insights['sleep_analysis'] = analyze_sleep_before_seizures(seizure_df, watch_df)
+            health_insights['heart_rate_analysis'] = analyze_heart_rate_trends(seizure_df, watch_df)
+            health_insights['activity_analysis'] = analyze_activity_correlation(seizure_df, watch_df)
+            health_charts = prepare_health_chart_data(seizure_df, watch_df)
+            print(f"[API] Health insights generated: {list(health_insights.keys())}")
+        else:
+            print("[API] No watch data - skipping health insights")
+        
+        response_data = {
+            'statistics': stats,
+            'charts': charts,
+            'pain_charts': pain_charts,
+            'health_insights': health_insights,
+            'health_charts': health_charts,
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        print("[API] ===== Data load complete =====\n")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"[API] ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': str(e),
+            'statistics': {},
+            'charts': {},
+            'pain_charts': {'pain_timeline': [], 'seizure_markers': []},
+            'health_insights': {},
+            'health_charts': {},
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }), 500
 
 @app.route('/api/export')
 def export_data():
