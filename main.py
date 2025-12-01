@@ -263,10 +263,13 @@ def trackseizure():
 
 @app.route("/pain", methods=["GET"])
 def trackpain():
-    pain = request.args.get("pain", type=int)
+    pain = request.args.get("pain", type=float)
 
-    if pain is None or not isinstance(pain, int):
-        return jsonify({"error": "Please provide pain number of scale from 1 - 10"}), 400
+    if pain is None:
+        return jsonify({"error": "Please provide pain as a number (float) on a scale from 1.0 - 10.0"}), 400
+
+    if not (1.0 <= pain <= 10.0):
+        return jsonify({"error": "Please provide pain in the range 1.0 - 10.0"}), 400
 
     message = trackPain(pain)
 
