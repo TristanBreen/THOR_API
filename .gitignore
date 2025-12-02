@@ -295,3 +295,4 @@ yarn-error.log*
 .versions
 Prediction/models/
 Prediction/Visualizations/
+Data/
