@@ -42,7 +42,36 @@ def safe_float(value, default=0.0):
         return float(value)
     except (ValueError, TypeError):
         return default
-
+    
+def load_prediction_data():
+    """Load prediction data from prediction.txt"""
+    try:
+        PREDICTION_FILE = os.path.join(BASE_DATA_DIR, "prediction.txt")
+        
+        if not os.path.exists(PREDICTION_FILE):
+            print(f"[PREDICTION] Prediction file not found at {PREDICTION_FILE}")
+            return {}
+        
+        with open(PREDICTION_FILE, 'r') as f:
+            lines = f.readlines()
+        
+        predictions = {}
+        for line in lines:
+            line = line.strip()
+            if '24 hours' in line:
+                predictions['24h'] = float(line.split('%')[0])
+            elif '48 hours' in line:
+                predictions['48h'] = float(line.split('%')[0])
+            elif '72 hours' in line:
+                predictions['72h'] = float(line.split('%')[0])
+        
+        print(f"[PREDICTION] Loaded predictions: {predictions}")
+        return predictions
+        
+    except Exception as e:
+        print(f"[PREDICTION] Error loading prediction data: {e}")
+        return {}
+    
 def load_apple_watch_data():
     """Load and process Apple Watch data from CSV file with robust error handling"""
     try:
@@ -744,6 +773,7 @@ def get_data():
         seizure_df = load_seizure_data()
         pain_df = load_pain_data()
         watch_df = load_apple_watch_data()
+        prediction_data = load_prediction_data()
         
         print(f"[API] Data loaded - Seizures: {len(seizure_df)}, Pain: {len(pain_df)}, Watch: {len(watch_df)}")
         
@@ -771,6 +801,7 @@ def get_data():
             'pain_charts': pain_charts,
             'health_insights': health_insights,
             'health_charts': health_charts,
+            'predictions': prediction_data, 
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         
@@ -788,6 +819,7 @@ def get_data():
             'pain_charts': {'pain_timeline': [], 'seizure_markers': []},
             'health_insights': {},
             'health_charts': {},
+            'predictions': {},
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }), 500
 

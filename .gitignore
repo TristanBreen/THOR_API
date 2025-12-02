@@ -293,3 +293,6 @@ yarn-error.log*
 .connect.lock
 .typingsrc
 .versions
+Prediction/models/
+Prediction/Visualizations/
+Data/

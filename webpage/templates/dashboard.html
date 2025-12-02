@@ -13,6 +13,20 @@
         .header h1 { font-size: 48px; color: #1a4d2e; margin-bottom: 8px; font-weight: 700; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(255,255,255,0.3); }
         .header p { color: #3d5a47; font-size: 18px; font-style: italic; margin-bottom: 5px; }
         .last-updated { font-size: 13px; color: #4d6d5a; margin-top: 10px; }
+        .predictions-banner { background: linear-gradient(135deg, #f5f1e8 0%, #ece5d7 100%); padding: 25px 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); margin-bottom: 20px; border-left: 5px solid #2d5a3d; }
+        .predictions-title { font-size: 18px; font-weight: 700; color: #1a4d2e; margin-bottom: 20px; text-align: center; letter-spacing: 1px; }
+        .predictions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .prediction-card { background: linear-gradient(135deg, #fff 0%, #faf8f4 100%); padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); transition: transform .3s, box-shadow .3s; border: 2px solid transparent; }
+        .prediction-card:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+        .prediction-card.low { border-color: #4a7c59; }
+        .prediction-card.medium { border-color: #c1a76c; }
+        .prediction-card.high { border-color: #c1566c; }
+        .prediction-timeframe { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #6d7d75; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .prediction-percentage { font-size: 42px; font-weight: bold; margin-bottom: 8px; }
+        .prediction-percentage.low { color: #4a7c59; }
+        .prediction-percentage.medium { color: #c1a76c; }
+        .prediction-percentage.high { color: #c1566c; }
+        .prediction-label { font-size: 12px; color: #6d7d75; font-style: italic; }
         .header-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:30px; }
         .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; margin-bottom:30px; }
         .stat-card { background: linear-gradient(135deg,#f5f1e8 0%,#ece5d7 100%); padding:25px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); border-left:5px solid #2d5a3d; transition: transform .3s, box-shadow .3s; }
@@ -70,6 +84,10 @@
             <h1>Kylie's Seizure Wellness Dashboard</h1>
             <p>Comprehensive health insights and tracking</p>
             <div class="last-updated">Last updated: <span id="lastUpdated">--</span></div>
+        </div>
+
+        <div class="predictions-banner" id="predictionsBanner">
+            <div class="loading">Loading predictions...</div>
         </div>
 
         <div class="header-actions">
@@ -236,12 +254,61 @@
     <script>
         const charts = {};
 
+        function renderPredictions(predictions) {
+            const banner = document.getElementById('predictionsBanner');
+            
+            if (!predictions || Object.keys(predictions).length === 0) {
+                banner.style.display = 'none';
+                return;
+            }
+            
+            banner.style.display = 'block';
+            
+            const getRiskClass = (percentage) => {
+                if (percentage < 15) return 'low';
+                if (percentage < 35) return 'medium';
+                return 'high';
+            };
+            
+            const getRiskLabel = (percentage) => {
+                if (percentage < 15) return 'Low Risk';
+                if (percentage < 35) return 'Moderate Risk';
+                return 'High Risk';
+            };
+            
+            const pred24 = predictions['24h'] || 0;
+            const pred48 = predictions['48h'] || 0;
+            const pred72 = predictions['72h'] || 0;
+            
+            banner.innerHTML = `
+                <div class="predictions-title">🔮 Seizure Risk Predictions</div>
+                <div class="predictions-grid">
+                    <div class="prediction-card ${getRiskClass(pred24)}">
+                        <div class="prediction-timeframe">Next 24 Hours</div>
+                        <div class="prediction-percentage ${getRiskClass(pred24)}">${pred24.toFixed(1)}%</div>
+                        <div class="prediction-label">${getRiskLabel(pred24)}</div>
+                    </div>
+                    <div class="prediction-card ${getRiskClass(pred48)}">
+                        <div class="prediction-timeframe">Next 48 Hours</div>
+                        <div class="prediction-percentage ${getRiskClass(pred48)}">${pred48.toFixed(1)}%</div>
+                        <div class="prediction-label">${getRiskLabel(pred48)}</div>
+                    </div>
+                    <div class="prediction-card ${getRiskClass(pred72)}">
+                        <div class="prediction-timeframe">Next 72 Hours</div>
+                        <div class="prediction-percentage ${getRiskClass(pred72)}">${pred72.toFixed(1)}%</div>
+                        <div class="prediction-label">${getRiskLabel(pred72)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
         async function loadData() {
             try {
                 const response = await fetch('/api/data');
                 const data = await response.json();
                 document.getElementById('lastUpdated').textContent = data.last_updated;
                 renderStats(data.statistics);
+                renderPredictions(data.predictions);
                 renderInsights(data);
                 renderCharts(data.charts);
                 renderPainChart(data.pain_charts);
