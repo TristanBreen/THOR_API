@@ -13,6 +13,26 @@ from data_preprocessing import DataLoader
 from feature_engineering import FeatureEngineer
 from train_model import SeizurePredictor
 
+# Resolve data directory paths
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+
+# Determine which base path to use (check in priority order)
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
+    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
+elif os.path.exists('/data/Data'):
+    BASE_DATA_DIR = '/data/Data'
+elif os.path.exists(os.path.join(PARENT_DIR, "Data")):
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+else:
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
+
+# Set prediction file paths
+PREDICTION_TXT = os.path.join(BASE_DATA_DIR, "prediction.txt")
+LONG_TERM_JSON = os.path.join(BASE_DATA_DIR, "longTermPredictions.json")
+
 class SeizureForecaster:
     def __init__(self, model_path='models'):
         self.predictor = SeizurePredictor()
@@ -218,34 +238,59 @@ def main():
     """Example usage"""
     forecaster = SeizureForecaster()
     
-    # Capture output
-    output_lines = []
+    # Get forecasts for different time horizons
+    forecast_24 = forecaster.get_forecast(hours_ahead=24)
+    forecast_48 = forecaster.get_forecast(hours_ahead=48)
+    forecast_72 = forecaster.get_forecast(hours_ahead=72)
     
-    # Print summary
-    #forecaster.print_summary()
+    # Calculate maximum seizure probability for each horizon
+    max_prob_24 = forecast_24['seizure_probability'].max() * 100
+    max_prob_48 = forecast_48['seizure_probability'].max() * 100
+    max_prob_72 = forecast_72['seizure_probability'].max() * 100
     
-    # Get 24-hour forecast
-    print("\n📅 24-HOUR FORECAST")
-    print("-" * 70)
-    forecast = forecaster.get_forecast(hours_ahead=24)
+    # Get current timestamp
+    current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     
-    # Show high-risk periods
-    high_risk = forecast[forecast['seizure_probability'] > 0.5]
-    if len(high_risk) > 0:
-        output_lines.append("⚠️  High Risk Periods (>50% probability):")
-        print("\n⚠️  High Risk Periods (>50% probability):")
-        for _, row in high_risk.iterrows():
-            line = f"  {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - Risk: {row['seizure_probability']:.1%} ({row['risk_level']})"
-            output_lines.append(line)
-            print(line)
-    else:
-        output_lines.append(" No high-risk periods detected in next 24 hours")
-        print("\n No high-risk periods detected in next 24 hours")
+    # Format output for console and prediction.txt
+    output_lines = [
+        f"{max_prob_24:.1f}% chance of seizure in the next 24 hours.",
+        f"{max_prob_48:.1f}% chance of seizure in the next 48 hours.",
+        f"{max_prob_72:.1f}% chance of seizure in the next 72 hours."
+    ]
     
-    # Write to file
+    # Print to console
+    for line in output_lines:
+        print(line)
+    
+    # Write to prediction.txt (overwrites)
     output_text = "\n".join(output_lines)
-    with open('../Data/prediction.txt', 'w', encoding='utf-8') as f:
+    with open(PREDICTION_TXT, 'w', encoding='utf-8') as f:
         f.write(output_text)
+    
+    # Append to longTermPredictions.json with timestamp
+    # Create new entry
+    new_entry = {
+        "timestamp": current_time,
+        "predictions": {
+            "24h": round(max_prob_24, 1),
+            "48h": round(max_prob_48, 1),
+            "72h": round(max_prob_72, 1)
+        },
+    }
+    
+    # Read existing data or create new list
+    try:
+        with open(LONG_TERM_JSON, 'r', encoding='utf-8') as f:
+            predictions_list = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        predictions_list = []
+    
+    # Append new entry
+    predictions_list.append(new_entry)
+    
+    # Write updated list back to file
+    with open(LONG_TERM_JSON, 'w', encoding='utf-8') as f:
+        json.dump(predictions_list, f, indent=2, ensure_ascii=False)
     
     return forecaster
 

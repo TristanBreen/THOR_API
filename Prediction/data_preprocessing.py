@@ -8,9 +8,28 @@ import numpy as np
 from datetime import datetime, timedelta
 import os
 
+# Resolve data directory paths
+SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(SCRIPT_DIR)
+
+# Determine which base path to use (check in priority order)
+if os.path.exists(os.path.join(SERVER_BASE_PATH, "Data")):
+    BASE_DATA_DIR = os.path.join(SERVER_BASE_PATH, "Data")
+elif os.path.exists('/data/Data'):
+    BASE_DATA_DIR = '/data/Data'
+elif os.path.exists(os.path.join(PARENT_DIR, "Data")):
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+else:
+    BASE_DATA_DIR = os.path.join(PARENT_DIR, "Data")
+    os.makedirs(BASE_DATA_DIR, exist_ok=True)
+
 class DataLoader:
-    def __init__(self, data_folder='../Data'):
-        self.data_folder = data_folder
+    def __init__(self, data_folder=None):
+        if data_folder is None:
+            self.data_folder = BASE_DATA_DIR
+        else:
+            self.data_folder = data_folder
         
     def load_seizures(self):
         """Load and preprocess seizure data"""
