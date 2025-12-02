@@ -218,8 +218,11 @@ def main():
     """Example usage"""
     forecaster = SeizureForecaster()
     
+    # Capture output
+    output_lines = []
+    
     # Print summary
-    forecaster.print_summary()
+    #forecaster.print_summary()
     
     # Get 24-hour forecast
     print("\n📅 24-HOUR FORECAST")
@@ -229,12 +232,20 @@ def main():
     # Show high-risk periods
     high_risk = forecast[forecast['seizure_probability'] > 0.5]
     if len(high_risk) > 0:
+        output_lines.append("⚠️  High Risk Periods (>50% probability):")
         print("\n⚠️  High Risk Periods (>50% probability):")
         for _, row in high_risk.iterrows():
-            print(f"  {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - "
-                  f"Risk: {row['seizure_probability']:.1%} ({row['risk_level']})")
+            line = f"  {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - Risk: {row['seizure_probability']:.1%} ({row['risk_level']})"
+            output_lines.append(line)
+            print(line)
     else:
-        print("\n✅ No high-risk periods detected in next 24 hours")
+        output_lines.append(" No high-risk periods detected in next 24 hours")
+        print("\n No high-risk periods detected in next 24 hours")
+    
+    # Write to file
+    output_text = "\n".join(output_lines)
+    with open('../Data/prediction.txt', 'w', encoding='utf-8') as f:
+        f.write(output_text)
     
     return forecaster
 

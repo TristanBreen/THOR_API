@@ -80,15 +80,15 @@ def main():
         print(f"❌ Error during prediction: {e}")
         sys.exit(1)
     
-    # Create visualizations
-    print_section("5/5: Creating Visualizations")
-    try:
-        from visualize import main as visualize_main
-        visualizer = visualize_main()
-        print("✅ Visualizations created")
-    except Exception as e:
-        print(f"❌ Error during visualization: {e}")
-        print("Continuing without visualizations...")
+    # Create visualizations UNCOMMENT TO HAVE VISUALS AGAIN
+    #print_section("5/5: Creating Visualizations")
+    #try:
+    #    from visualize import main as visualize_main
+    #    visualizer = visualize_main()
+    #    print("✅ Visualizations created")
+    #except Exception as e:
+    #    print(f"❌ Error during visualization: {e}")
+    #    print("Continuing without visualizations...")
     
     # Summary
     print_header("PIPELINE COMPLETE")
