@@ -1,0 +1,61 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    ports:
+      - "8096:8096"
+    volumes:
+      - /home/tristan/jellyfin/config:/config
+      - /home/tristan/jellyfin/cache:/cache
+      - /home/tristan/jellyfin/media/myfiles:/media/myfiles
+    restart: unless-stopped
+  
+  thor-api:
+    container_name: thor-api
+    build:
+      context: ../API/API_Repoed/THOR_API
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - /home/tristan/API/API_Repoed/THOR_API:/app
+    environment:
+      - TZ=America/Phoenix
+    restart: unless-stopped
+  
+  thor-webpage:
+    container_name: thor-webpage
+    build:
+      context: ../API/API_Repoed/THOR_API/webpage
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    volumes:
+      - /home/tristan/API/API_Repoed/THOR_API:/data
+    environment:
+      - TZ=America/Phoenix
+    restart: unless-stopped
+  
+  pinchflat:
+    image: ghcr.io/kieraneglin/pinchflat:latest
+    container_name: pinchflat
+    ports:
+      - "8945:8945"
+    environment:
+      - TZ=America/Phoenix
+    volumes:
+      - /home/tristan/jellyfin/Pinchflat/config:/config
+      - /home/tristan/jellyfin/media/myfiles/youtube:/downloads
+    restart: unless-stopped
+  
+  thor-scheduler:
+    container_name: thor-scheduler
+    build:
+      context: ../API/API_Repoed/THOR_API/Prediction
+      dockerfile: Dockerfile.scheduler
+    volumes:
+      - /home/tristan/API/API_Repoed/THOR_API/Prediction:/app
+      - /home/tristan/API/API_Repoed/THOR_API/Data:/Data
+    environment:
+      - TZ=America/Phoenix
+    restart: unless-stopped
