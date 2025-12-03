@@ -17,6 +17,7 @@ from datetime import datetime
 
 from data_preprocessing import DataLoader
 from feature_engineering import FeatureEngineer
+from prediction_feedback import PredictionFeedback
 
 class SeizurePredictor:
     def __init__(self, prediction_horizon=6):
@@ -26,9 +27,15 @@ class SeizurePredictor:
         self.regression_model = None
         self.feature_cols = None
         
-    def train(self, X, y_classification, y_regression):
+    def train(self, X, y_classification, y_regression, sample_weights=None):
         """
         Train both classification and regression models
+        
+        Args:
+            X: Feature matrix
+            y_classification: Classification targets
+            y_regression: Regression targets
+            sample_weights: Optional sample weights (e.g., from prediction feedback)
         """
         # Handle missing values
         X = X.fillna(X.mean())
@@ -37,20 +44,37 @@ class SeizurePredictor:
         X_scaled = self.scaler.fit_transform(X)
         X_scaled = pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
         
+        # Process sample weights if provided
+        if sample_weights is not None:
+            # If we have fewer weights than samples, extend them (for feedback data)
+            if len(sample_weights) < len(X):
+                # Create default weights for remaining samples
+                extended_weights = np.ones(len(X))
+                # Assign feedback weights where available
+                for i in range(min(len(sample_weights), len(X))):
+                    extended_weights[i] = sample_weights[i]
+                sample_weights = extended_weights
+        
         # Split data
         X_train, X_test, y_class_train, y_class_test, y_reg_train, y_reg_test = train_test_split(
             X_scaled, y_classification, y_regression, 
             test_size=0.2, random_state=42, stratify=y_classification
         )
         
+        # Split sample weights accordingly if provided
+        weights_train = None
+        if sample_weights is not None:
+            X_train_indices = X_train.index
+            weights_train = sample_weights[X_train_indices.tolist()]
+        
         print("Training classification model...")
         self.classification_model = self._train_classification(
-            X_train, X_test, y_class_train, y_class_test
+            X_train, X_test, y_class_train, y_class_test, sample_weight=weights_train
         )
         
         print("\nTraining regression model...")
         self.regression_model = self._train_regression(
-            X_train, X_test, y_reg_train, y_reg_test
+            X_train, X_test, y_reg_train, y_reg_test, sample_weight=weights_train
         )
         
         return {
@@ -63,7 +87,7 @@ class SeizurePredictor:
             'feature_importance': self._get_feature_importance(X.columns)
         }
     
-    def _train_classification(self, X_train, X_test, y_train, y_test):
+    def _train_classification(self, X_train, X_test, y_train, y_test, sample_weight=None):
         """Train seizure occurrence classifier"""
         # Try multiple models
         models = {
@@ -87,7 +111,10 @@ class SeizurePredictor:
         
         for name, model in models.items():
             print(f"  Training {name}...")
-            model.fit(X_train, y_train)
+            if sample_weight is not None:
+                model.fit(X_train, y_train, sample_weight=sample_weight)
+            else:
+                model.fit(X_train, y_train)
             score = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
             print(f"  {name} ROC-AUC: {score:.4f}")
             
@@ -97,7 +124,7 @@ class SeizurePredictor:
         
         return best_model
     
-    def _train_regression(self, X_train, X_test, y_train, y_test):
+    def _train_regression(self, X_train, X_test, y_train, y_test, sample_weight=None):
         """Train time-to-next-seizure regressor"""
         model = RandomForestRegressor(
             n_estimators=200,
@@ -106,7 +133,10 @@ class SeizurePredictor:
             random_state=42
         )
         
-        model.fit(X_train, y_train)
+        if sample_weight is not None:
+            model.fit(X_train, y_train, sample_weight=sample_weight)
+        else:
+            model.fit(X_train, y_train)
         
         return model
     
@@ -226,7 +256,7 @@ def main():
     # Load and prepare data
     print("\n1. Loading data...")
     loader = DataLoader()
-    df, seizures = loader.create_hourly_dataset()
+    df, seizures = loader.create_hourly_dataset(include_feedback_features=True)
     print(f"   Loaded {len(df)} hours of data")
     print(f"   Total seizures: {len(seizures)}")
     
@@ -244,13 +274,39 @@ def main():
     print(f"   Training samples: {len(X)}")
     print(f"   Positive samples (seizures): {y_class.sum()} ({y_class.sum()/len(y_class)*100:.1f}%)")
     
+    # Load and apply prediction feedback weights
+    print("\n4. Loading prediction feedback...")
+    sample_weights = None
+    try:
+        feedback = PredictionFeedback()
+        if feedback.load_predictions() is not None and feedback.load_seizures() is not None:
+            feedback.validate_predictions()
+            sample_weights = feedback.create_recency_weights()
+            
+            # Align weights with training data indices
+            if len(sample_weights) > 0:
+                # Normalize weights
+                sample_weights = sample_weights / sample_weights.sum() * len(sample_weights)
+                print(f"   [OK] Loaded {len(sample_weights)} prediction feedback records")
+                print(f"   Weights range: [{sample_weights.min():.4f}, {sample_weights.max():.4f}]")
+                
+                # Print validation metrics
+                metrics_feedback = feedback.get_validation_metrics()
+                if metrics_feedback:
+                    print("\n   Prediction Validation Metrics:")
+                    for window, metric in metrics_feedback.items():
+                        print(f"     {window}: {metric['accuracy']:.1%} accuracy ({metric['correct_predictions']}/{metric['total_predictions']})")
+    except Exception as e:
+        print(f"   [WARNING] Could not load prediction feedback: {e}")
+        print("   Training without feedback weights...")
+    
     # Train models
-    print("\n4. Training models...")
+    print("\n5. Training models...")
     predictor = SeizurePredictor(prediction_horizon=6)
-    metrics = predictor.train(X, y_class, y_reg)
+    metrics = predictor.train(X, y_class, y_reg, sample_weights=sample_weights)
     
     # Save models
-    print("\n5. Saving models...")
+    print("\n6. Saving models...")
     predictor.save_model()
     
     # Save feature importance
