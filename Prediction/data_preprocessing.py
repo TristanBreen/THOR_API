@@ -91,9 +91,12 @@ class DataLoader:
         df = df.sort_values('DateTime').reset_index(drop=True)
         return df
     
-    def create_hourly_dataset(self):
+    def create_hourly_dataset(self, include_feedback_features=False):
         """
         Create a unified hourly dataset combining all data sources
+        
+        Args:
+            include_feedback_features: If True, includes prediction feedback features
         """
         # Load all data
         seizures = self.load_seizures()
@@ -139,7 +142,60 @@ class DataLoader:
         # Forward fill pain data (last observation carried forward, max 24 hours)
         df['Pain'] = df['Pain'].fillna(method='ffill', limit=24)
         
+        # Add prediction feedback features if requested
+        if include_feedback_features:
+            df = self._add_prediction_feedback_features(df, seizures)
+        
         return df, seizures
+    
+    def _add_prediction_feedback_features(self, df, seizures):
+        """
+        Add features based on prediction history and accuracy
+        This helps the model learn from its own past predictions
+        """
+        try:
+            from prediction_feedback import PredictionFeedback
+            
+            feedback = PredictionFeedback(data_folder=self.data_folder)
+            feedback.load_predictions()
+            feedback.load_seizures()
+            
+            # Get prediction feedback features
+            pred_features = feedback.create_prediction_features()
+            
+            if len(pred_features) > 0:
+                # Merge feedback features on nearest timestamp
+                pred_features = pred_features.rename(columns={'DateTime': 'PredDateTime'})
+                
+                # For each hour in df, find the nearest prediction
+                for col in ['recent_pred_24h_avg', 'recent_pred_24h_std', 
+                           'recent_pred_48h_avg', 'recent_pred_48h_std',
+                           'prediction_trend_24h', 'recent_prediction_variance',
+                           'hours_since_last_prediction', 'confidence_spike']:
+                    df[col] = np.nan
+                
+                for idx, pred_row in pred_features.iterrows():
+                    pred_time = pred_row['PredDateTime']
+                    # Find closest hour in df
+                    closest_idx = (df['DateTime'] - pred_time).abs().argmin()
+                    
+                    for col in pred_features.columns:
+                        if col != 'PredDateTime' and pd.notna(pred_row[col]):
+                            df.loc[closest_idx, col] = pred_row[col]
+                
+                # Forward fill these features (they apply to all hours following the prediction)
+                for col in ['recent_pred_24h_avg', 'recent_pred_24h_std', 
+                           'recent_pred_48h_avg', 'recent_pred_48h_std']:
+                    df[col] = df[col].fillna(method='ffill', limit=24)
+                
+                print("[OK] Added prediction feedback features")
+        
+        except ImportError:
+            print("[WARNING] Could not import prediction_feedback (this is optional)")
+        except Exception as e:
+            print(f"[WARNING] Error adding feedback features: {e}")
+        
+        return df
 
 if __name__ == "__main__":
     # Test the data loader

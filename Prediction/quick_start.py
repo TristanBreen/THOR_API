@@ -31,13 +31,13 @@ def check_data_files():
             missing_files.append(file)
     
     if missing_files:
-        print("❌ Missing required data files:")
+        print("[ERROR] Missing required data files:")
         for file in missing_files:
             print(f"   - {file}")
         print(f"\nPlease ensure these files exist in {data_folder}/")
         return False
     
-    print("✅ All required data files found")
+    print("[OK] All required data files found")
     return True
 
 def main():
@@ -55,9 +55,9 @@ def main():
     try:
         from train_model import main as train_main
         predictor, metrics = train_main()
-        print("✅ Model training complete")
+        print("[OK] Model training complete")
     except Exception as e:
-        print(f"❌ Error during training: {e}")
+        print(f"[ERROR] Error during training: {e}")
         sys.exit(1)
     
     # Analyze triggers
@@ -65,9 +65,9 @@ def main():
     try:
         from analyze_triggers import main as analyze_main
         analyzer = analyze_main()
-        print("✅ Trigger analysis complete")
+        print("[OK] Trigger analysis complete")
     except Exception as e:
-        print(f"❌ Error during analysis: {e}")
+        print(f"[ERROR] Error during analysis: {e}")
         sys.exit(1)
     
     # Generate predictions
@@ -75,9 +75,9 @@ def main():
     try:
         from predict import main as predict_main
         forecaster = predict_main()
-        print("✅ Predictions generated")
+        print("[OK] Predictions generated")
     except Exception as e:
-        print(f"❌ Error during prediction: {e}")
+        print(f"[ERROR] Error during prediction: {e}")
         sys.exit(1)
     
     # Create visualizations UNCOMMENT TO HAVE VISUALS AGAIN
@@ -92,7 +92,7 @@ def main():
     
     # Summary
     print_header("PIPELINE COMPLETE")
-    print("\n📁 Generated Files:")
+    print("\n[INFO] Generated Files:")
     print("   - models/classification_model_latest.pkl")
     print("   - models/regression_model_latest.pkl")
     print("   - models/scaler_latest.pkl")
@@ -100,28 +100,28 @@ def main():
     print("   - models/trigger_analysis.json")
     print("   - visualizations/*.png")
     
-    print("\n🎯 Next Steps:")
+    print("\n[INFO] Next Steps:")
     print("   1. Review visualizations in the 'visualizations/' folder")
     print("   2. Check trigger analysis in 'models/trigger_analysis.json'")
     print("   3. Run 'python predict.py' anytime for current predictions")
     print("   4. Retrain models periodically as new data arrives")
     
-    print("\n💡 Tips:")
+    print("\n[TIPS] Tips:")
     print("   - High seizure probability (>60%) indicates elevated risk")
     print("   - Check feature importance to understand key factors")
     print("   - Regular retraining improves model accuracy")
     
-    print(f"\n✅ All done! Completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"\n[OK] All done! Completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 70 + "\n")
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Pipeline interrupted by user")
+        print("\n\n[WARNING] Pipeline interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n\n❌ Unexpected error: {e}")
+        print(f"\n\n[ERROR] Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

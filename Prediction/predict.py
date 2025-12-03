@@ -44,8 +44,8 @@ class SeizureForecaster:
         """
         Get prediction for current time
         """
-        # Load latest data
-        df, seizures = self.loader.create_hourly_dataset()
+        # Load latest data with feedback features
+        df, seizures = self.loader.create_hourly_dataset(include_feedback_features=True)
         
         # Create features
         df_features = self.engineer.create_features(df)
@@ -74,8 +74,8 @@ class SeizureForecaster:
         """
         Get forecast for next N hours
         """
-        # Load latest data to get baseline features
-        df, seizures = self.loader.create_hourly_dataset()
+        # Load latest data with feedback features
+        df, seizures = self.loader.create_hourly_dataset(include_feedback_features=True)
         df_features = self.engineer.create_features(df)
         
         # Create future datetime range starting from now
@@ -164,8 +164,8 @@ class SeizureForecaster:
         """
         Get comprehensive summary including recent history and predictions
         """
-        # Load data
-        df, seizures = self.loader.create_hourly_dataset()
+        # Load data with feedback features
+        df, seizures = self.loader.create_hourly_dataset(include_feedback_features=True)
         
         # Get current prediction
         current_pred = self.get_current_prediction()

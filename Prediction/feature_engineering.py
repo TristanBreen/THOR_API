@@ -35,6 +35,9 @@ class FeatureEngineer:
         # Sleep features
         df = self._add_sleep_features(df)
         
+        # Prediction feedback features (if available)
+        df = self._add_feedback_engineered_features(df)
+        
         return df
     
     def _add_temporal_features(self, df):
@@ -158,6 +161,50 @@ class FeatureEngineer:
         if 'Sleep Analysis [Total] (hr)' in df.columns and 'Sleep Analysis [Deep] (hr)' in df.columns:
             df['deep_sleep_ratio'] = df['Sleep Analysis [Deep] (hr)'] / (
                 df['Sleep Analysis [Total] (hr)'] + 0.01)  # Avoid division by zero
+        
+        return df
+    
+    def _add_feedback_engineered_features(self, df):
+        """
+        Engineer features from prediction feedback history
+        These help the model learn from past prediction patterns
+        """
+        feedback_cols = [
+            'recent_pred_24h_avg', 'recent_pred_24h_std',
+            'recent_pred_48h_avg', 'recent_pred_48h_std',
+            'prediction_trend_24h', 'recent_prediction_variance',
+            'hours_since_last_prediction', 'confidence_spike'
+        ]
+        
+        # Only add features if they exist in the dataframe
+        available_feedback_cols = [col for col in feedback_cols if col in df.columns]
+        
+        if not available_feedback_cols:
+            return df
+        
+        # Create derived features from feedback
+        if 'recent_pred_24h_avg' in df.columns:
+            # Prediction confidence level (std indicates uncertainty)
+            df['prediction_confidence'] = 1.0 / (1.0 + df['recent_pred_24h_std'].fillna(0))
+            
+            # How extreme is current prediction context relative to recent?
+            df['prediction_anomaly'] = (
+                df['recent_pred_24h_avg'] - df['recent_pred_24h_avg'].mean()
+            ) / (df['recent_pred_24h_std'].fillna(1) + 0.01)
+        
+        if 'confidence_spike' in df.columns:
+            # Rapid changes in confidence might indicate changing conditions
+            df['confidence_momentum'] = df['confidence_spike'].rolling(
+                window=6, min_periods=1).mean()
+        
+        if 'prediction_trend_24h' in df.columns:
+            # Is risk increasing or decreasing?
+            df['risk_trajectory'] = np.sign(df['prediction_trend_24h'])
+        
+        # Fill NaN values in feedback features with defaults
+        for col in available_feedback_cols:
+            if col in df.columns:
+                df[col] = df[col].fillna(df[col].median() if df[col].median() > 0 else 0)
         
         return df
     
