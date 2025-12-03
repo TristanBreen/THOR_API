@@ -97,39 +97,144 @@ def getWeatherString(lat, lon):
         return "Error: Unable to retrieve weather data. Error: {str(e)}"
 
 def getFunFact():
-    """
-    Fetches a fun fact using the Gemini API.
-    
-    Returns:
-        str: A fun fact (or error message if the API fails).
-    """
+   #"""
+   #Fetches a fun fact using the Gemini API.
+   #
+   #Returns:
+   #    str: A fun fact (or error message if the API fails).
+   #"""
 
-    topics = [
-        "space", "animals", "technology", "history", "geography",
-        "food", "movies", "music", "sports", "science",
-        "oceans", "plants", "art", "literature", "physics",
-        "math", "weather", "architecture", "inventions", "human body",
-        "dinosaurs", "programming", "robots", "philosophy", "travel"
+   #topics = [
+   #    "space", "animals", "technology", "history", "geography",
+   #    "food", "movies", "music", "sports", "science",
+   #    "oceans", "plants", "art", "literature", "physics",
+   #    "math", "weather", "architecture", "inventions", "human body",
+   #    "dinosaurs", "programming", "robots", "philosophy", "travel"
+   #]
+   #
+   #topic = random.choice(topics)
+
+   #try:
+   #    genai.configure(api_key=GEMINI_API_KEY)
+   #    model = genai.GenerativeModel("gemini-2.5-flash")
+
+   #    prompt = f"Tell me a very short, interesting fun fact about {topic}. Keep it under 20 words."
+   #    response = model.generate_content(prompt)
+
+   #    return "Did you know that " + response.text.strip()
+
+   #except Exception as e:
+   #    return f"Failed to fetch a fun fact. Error: {str(e)}"
+
+    messages = [
+        "Honey never spoils; edible honey has been found in ancient Egyptian tombs.",
+        "Octopuses have three hearts.",
+        "You are actually slightly taller in the morning than at night.",
+        "Bananas are berries, but strawberries aren't.",
+        "A day on Venus is longer than a year on Venus.",
+        "Cows have best friends and get stressed when they are separated.",
+        "The Eiffel Tower can grow 15 cm taller during the summer due to thermal expansion.",
+        "A group of flamingos is called a 'flamboyance'.",
+        "Sea otters hold hands when they sleep to keep from drifting apart.",
+        "It is physically impossible for pigs to look up into the sky.",
+        "Australia is wider than the moon.",
+        "The unicorn is the national animal of Scotland.",
+        "Humans share 60% of their DNA with bananas.",
+        "There are more stars in the universe than grains of sand on all the Earth's beaches.",
+        "A cloud can weigh more than a million pounds.",
+        "Wombat poop is cube-shaped.",
+        "The shortest war in history lasted only 38 minutes.",
+        "Sloths can hold their breath longer than dolphins can.",
+        "Butterflies taste with their feet.",
+        "The total weight of all ants on Earth is about the same as the weight of all humans.",
+        "An ostrich's eye is bigger than its brain.",
+        "Venus consists of no moons.",
+        "Elephants are the only mammals that cannot jump.",
+        "Hot water turns into ice faster than cold water (the Mpemba effect).",
+        "A snail can sleep for three years.",
+        "The word 'stewardesses' is the longest word typed with only the left hand.",
+        "The moon has moonquakes.",
+        "A blue whale's heart is the size of a small car.",
+        "Goats have rectangular pupils.",
+        "The longest wedding veil was longer than 63 football fields.",
+        "Tigers have striped skin, not just striped fur.",
+        "A 'jiffy' is an actual unit of time: 1/100th of a second.",
+        "Some cats are allergic to humans.",
+        "Your nose and ears never stop growing.",
+        "Space smells like seared steak.",
+        "There is a species of jellyfish that is biologically immortal.",
+        "The inventor of the Pringles can is buried in one.",
+        "High heels were originally invented for men.",
+        "It takes 8 minutes and 20 seconds for light to travel from the Sun to Earth.",
+        "Sharks have been around longer than trees.",
+        "Peanuts are not nuts; they are legumes.",
+        "The wood frog can hold its pee for up to eight months.",
+        "The letter 'Q' is the only letter that doesn't appear in any US state name.",
+        "Armadillos are bulletproof.",
+        "Most toilets flush in E flat.",
+        "A single bolt of lightning contains enough energy to toast 100,000 slices of bread.",
+        "Apples float because they are 25% air.",
+        "Firefighters use wetting agents to make water wetter.",
+        "Kangaroos cannot walk backward.",
+        "A rhinoceros' horn is made of hair (keratin).",
+        "The Spanish national anthem has no words.",
+        "Human teeth are the only part of the body that cannot heal themselves.",
+        "There are more fake flamingos in the world than real ones.",
+        "A shrimp's heart is in its head.",
+        "Cap'n Crunch's full name is Horatio Magellan Crunch.",
+        "The world's smallest reptile fits on a fingertip.",
+        "In Switzerland, it is illegal to own just one guinea pig.",
+        "Ketchup was once sold as medicine.",
+        "The dot over the letter 'i' is called a tittle.",
+        "It is impossible to hum while holding your nose.",
+        "Oxford University is older than the Aztec Empire.",
+        "Bubble wrap was originally invented as wallpaper.",
+        "A crocodile cannot stick its tongue out.",
+        "There are 293 ways to make change for a dollar.",
+        "The average person walks the equivalent of five times around the world in a lifetime.",
+        "Owls don't have eyeballs; they have eye tubes.",
+        "The hashtag symbol is technically called an octothorpe.",
+        "Polar bear skin is black, and their fur is clear.",
+        "A bolt of lightning is five times hotter than the surface of the sun.",
+        "Chewing gum is banned in Singapore.",
+        "Koala fingerprints are so similar to humans they have confused crime scene investigators.",
+        "Russia has a larger surface area than Pluto.",
+        "You can't tickle yourself.",
+        "A baby octopus is about the size of a flea when it is born.",
+        "France covers the most time zones of any country (12).",
+        "Hippopotamus milk is pink.",
+        "The Komodo dragon is the largest lizard.",
+        "There is a town in Norway called 'Hell'.",
+        "The smell of freshly cut grass is actually a plant distress call.",
+        "Lobsters taste with their feet.",
+        "A hummingbird weighs less than a penny.",
+        "The longest English word is 189,819 letters long.",
+        "New York City drifts about one inch farther away from Europe every year.",
+        "Your tongue print is as unique as your fingerprint.",
+        "Alaska is the only state that can be typed on one row of a keyboard.",
+        "The electric chair was invented by a dentist.",
+        "Birds don't urinate.",
+        "Only 5% of the ocean has been explored.",
+        "Before erasers were invented, people used bread crumbs to erase graphite.",
+        "A day on Mercury lasts approximately 1,408 hours.",
+        "The heart of a shrimp is located in its head.",
+        "All odd numbers have the letter 'e' in them.",
+        "Sea lions have rhythm and can clap to a beat.",
+        "The tiny pocket in jeans was designed for pocket watches.",
+        "Astronauts can grow up to two inches in space.",
+        "A group of pugs is called a grumble.",
+        "Cotton candy was invented by a dentist.",
+        "The average cloud moves at 30 mph.",
+        "There is a planet made of diamonds called 55 Cancri e.",
+        "Bananas are curved because they grow towards the sun."
     ]
-    
-    topic = random.choice(topics)
 
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash")
-
-        prompt = f"Tell me a very short, interesting fun fact about {topic}. Keep it under 20 words."
-        response = model.generate_content(prompt)
-
-        return "Did you know that " + response.text.strip()
-
-    except Exception as e:
-        return f"Failed to fetch a fun fact. Error: {str(e)}"
+    return random.choice(messages)
 
 def concatMessages(lat, lon):
     goodMorning = getGoodMorningString()
     weather = getWeatherString(lat, lon)
-    funFact = ""#FIX LATER
+    funFact = getFunFact()
 
     return goodMorning + weather + funFact
 
