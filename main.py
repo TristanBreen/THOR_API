@@ -42,6 +42,7 @@ os.makedirs(BASE_DATA_DIR, exist_ok=True)
 SEIZURE_FILE = os.path.join(BASE_DATA_DIR, "seizures.csv")
 PAIN_FILE = os.path.join(BASE_DATA_DIR, "pain.csv")
 APPLE_WATCH_FILE = os.path.join(BASE_DATA_DIR, "appleWatchData.csv")
+PREDICTION_FILE = os.path.join(BASE_DATA_DIR, "prediction.txt")
 
 def getGoodMorningString():
     messages = [
@@ -128,7 +129,7 @@ def getFunFact():
 def concatMessages(lat, lon):
     goodMorning = getGoodMorningString()
     weather = getWeatherString(lat, lon)
-    funFact = getFunFact()
+    funFact = ""#FIX LATER
 
     return goodMorning + weather + funFact
 
@@ -395,6 +396,26 @@ def getnextseizure():
         return jsonify({"error": f"File not found: {SEIZURE_FILE}"}), 404
     except Exception as e:
         return jsonify({"error": f"Failed to read file. Error: {str(e)}"}), 500
+
+@app.route("/prediction", methods=["GET"])
+def getprediction():
+    """
+    Returns the current seizure prediction from prediction.txt
+    """
+    try:
+        if not os.path.exists(PREDICTION_FILE):
+            return jsonify({"error": "Prediction file not found"}), 404
+        
+        with open(PREDICTION_FILE, 'r', encoding='utf-8') as file:
+            prediction_text = file.read().strip()
+        
+        if not prediction_text:
+            return jsonify({"error": "Prediction file is empty"}), 404
+        
+        return jsonify({"prediction": prediction_text}), 200
+    
+    except Exception as e:
+        return jsonify({"error": f"Failed to read prediction file. Error: {str(e)}"}), 500
 
 @app.errorhandler(404)
 def not_found(error):
