@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Seizure Monitoring Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Georgia', 'Garamond', serif; background: linear-gradient(135deg, #1a4d2e 0%, #2d5a3d 50%, #3d6b4f 100%); min-height: 100vh; padding: 20px; color: #2d3e35; }
@@ -253,6 +254,9 @@
 
     <script>
         const charts = {};
+        let dataCache = null;
+        let lastLoadTime = 0;
+        const MIN_LOAD_INTERVAL = 5000; // Minimum 5 seconds between manual loads
 
         function renderPredictions(predictions) {
             const banner = document.getElementById('predictionsBanner');
@@ -303,9 +307,19 @@
         }
 
         async function loadData() {
+            const now = Date.now();
+            if (now - lastLoadTime < MIN_LOAD_INTERVAL) {
+                return; // Prevent rapid repeated loads
+            }
+            lastLoadTime = now;
+            
             try {
                 const response = await fetch('/api/data');
+                if (!response.ok) throw new Error('Network response not ok');
+                
                 const data = await response.json();
+                dataCache = data;
+                
                 document.getElementById('lastUpdated').textContent = data.last_updated;
                 renderStats(data.statistics);
                 renderPredictions(data.predictions);
@@ -314,7 +328,6 @@
                 renderPainChart(data.pain_charts);
                 renderTable(data.charts.timeline);
                 
-                // Only render health data if functions exist and data is available
                 if (typeof renderHealthStats === 'function' && data.health_insights) {
                     renderHealthStats(data.health_insights);
                 }
@@ -326,7 +339,9 @@
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
-                document.getElementById('statsGrid').innerHTML = '<div class="error">Failed to load seizure data</div>';
+                if (!dataCache) {
+                    document.getElementById('statsGrid').innerHTML = '<div class="error">Failed to load seizure data</div>';
+                }
             }
         }
 
@@ -554,7 +569,6 @@
             const sleepCompCtx = document.getElementById('sleepComparisonChart').getContext('2d');
             if (charts.sleepComparison) charts.sleepComparison.destroy();
             
-            // This would need data restructured - showing timeline instead
             if (healthCharts.sleep_timeline && healthCharts.sleep_timeline.length > 0) {
                 const sleepData = healthCharts.sleep_timeline;
                 const seizureMarkers = healthCharts.seizure_markers || [];
@@ -569,67 +583,48 @@
                                 data: sleepData.map(d => d.total_sleep),
                                 borderColor: '#2d5a3d',
                                 backgroundColor: 'rgba(45,90,61,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                pointHoverRadius: 3,
+                                borderWidth: 1.5
                             },
                             {
                                 label: 'Deep Sleep',
                                 data: sleepData.map(d => d.deep_sleep),
                                 borderColor: '#4a7c59',
                                 backgroundColor: 'rgba(74,124,89,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                pointHoverRadius: 3,
+                                borderWidth: 1.5
                             },
                             {
                                 label: 'REM Sleep',
                                 data: sleepData.map(d => d.rem_sleep),
                                 borderColor: '#6fa86f',
                                 backgroundColor: 'rgba(111,168,111,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                pointHoverRadius: 3,
+                                borderWidth: 1.5
                             }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: { duration: 0 },
                         plugins: {
-                            legend: { display: true, position: 'top' },
-                            annotation: {
-                                annotations: {}
-                            }
+                            legend: { display: true, position: 'top' }
                         },
                         scales: {
                             y: { beginAtZero: true, title: { display: true, text: 'Hours' } },
                             x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
                         }
-                    },
-                    plugins: [{
-                        id: 'seizureLines',
-                        afterDatasetsDraw(chart) {
-                            const ctx = chart.ctx;
-                            const xScale = chart.scales.x;
-                            const yScale = chart.scales.y;
-                            
-                            sleepData.forEach((data, index) => {
-                                if (seizureMarkers.includes(data.date_str)) {
-                                    const x = xScale.getPixelForValue(index);
-                                    ctx.save();
-                                    ctx.strokeStyle = '#c1566c';
-                                    ctx.lineWidth = 3;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.beginPath();
-                                    ctx.moveTo(x, yScale.top);
-                                    ctx.lineTo(x, yScale.bottom);
-                                    ctx.stroke();
-                                    ctx.restore();
-                                }
-                            });
-                        }
-                    }]
+                    }
                 });
             }
 
@@ -640,11 +635,7 @@
             if (healthCharts.hr_timeline && healthCharts.hr_timeline.length > 0) {
                 const hrData = healthCharts.hr_timeline;
                 const seizureMarkers = healthCharts.seizure_markers || [];
-                
-                // Create seizure marker points
-                const seizurePoints = hrData.map(d => 
-                    seizureMarkers.includes(d.date_str) ? d.avg_hr : null
-                );
+                const seizurePoints = hrData.map(d => seizureMarkers.includes(d.date_str) ? d.avg_hr : null);
                 
                 charts.hrTrend = new Chart(hrTrendCtx, {
                     type: 'line',
@@ -656,14 +647,16 @@
                                 data: hrData.map(d => d.avg_hr),
                                 borderColor: '#2d5a3d',
                                 backgroundColor: 'rgba(45,90,61,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                pointHoverRadius: 3,
+                                borderWidth: 1.5
                             },
                             {
                                 label: 'Seizure Days',
                                 data: seizurePoints,
-                                pointRadius: 8,
+                                pointRadius: 6,
                                 pointBackgroundColor: '#c1566c',
                                 pointBorderColor: '#fff',
                                 pointBorderWidth: 2,
@@ -674,6 +667,7 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: { duration: 0 },
                         plugins: { legend: { display: true, position: 'top' } },
                         scales: {
                             y: { title: { display: true, text: 'Heart Rate (bpm)' } },
@@ -690,10 +684,7 @@
             if (healthCharts.activity_timeline && healthCharts.activity_timeline.length > 0) {
                 const actData = healthCharts.activity_timeline;
                 const seizureMarkers = healthCharts.seizure_markers || [];
-                
-                const seizurePoints = actData.map(d => 
-                    seizureMarkers.includes(d.date_str) ? d.walking_distance : null
-                );
+                const seizurePoints = actData.map(d => seizureMarkers.includes(d.date_str) ? d.walking_distance : null);
                 
                 charts.activityTrend = new Chart(activityTrendCtx, {
                     type: 'bar',
@@ -703,22 +694,15 @@
                             {
                                 label: 'Walking Distance',
                                 data: actData.map(d => d.walking_distance),
-                                backgroundColor: '#4a7c59'
-                            },
-                            {
-                                label: 'Seizure Days',
-                                data: seizurePoints,
-                                type: 'scatter',
-                                pointRadius: 8,
-                                pointBackgroundColor: '#c1566c',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2
+                                backgroundColor: '#4a7c59',
+                                borderWidth: 0
                             }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: { duration: 0 },
                         plugins: { legend: { display: true, position: 'top' } },
                         scales: {
                             y: { beginAtZero: true, title: { display: true, text: 'Miles' } },
@@ -734,7 +718,6 @@
             
             if (healthCharts.sleep_debt && healthCharts.sleep_debt.length > 0) {
                 const debtData = healthCharts.sleep_debt;
-                const seizureMarkers = healthCharts.seizure_markers || [];
                 
                 charts.sleepDebt = new Chart(sleepDebtCtx, {
                     type: 'line',
@@ -746,60 +729,35 @@
                                 data: debtData.map(d => d.cumulative_debt_3day),
                                 borderColor: '#c1566c',
                                 backgroundColor: 'rgba(193,86,108,0.1)',
-                                tension: 0.4,
-                                fill: true
+                                tension: 0.2,
+                                fill: true,
+                                pointRadius: 1.5,
+                                borderWidth: 1.5
                             },
                             {
                                 label: '7-Day Sleep Debt',
                                 data: debtData.map(d => d.cumulative_debt_7day),
                                 borderColor: '#8b7355',
                                 backgroundColor: 'rgba(139,115,85,0.1)',
-                                tension: 0.4,
-                                fill: true
+                                tension: 0.2,
+                                fill: true,
+                                pointRadius: 1.5,
+                                borderWidth: 1.5
                             }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: { duration: 0 },
                         plugins: { 
-                            legend: { display: true, position: 'top' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + 'h deficit';
-                                    }
-                                }
-                            }
+                            legend: { display: true, position: 'top' }
                         },
                         scales: {
                             y: { title: { display: true, text: 'Hours of Sleep Deficit' } },
                             x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
                         }
-                    },
-                    plugins: [{
-                        id: 'seizureLines',
-                        afterDatasetsDraw(chart) {
-                            const ctx = chart.ctx;
-                            const xScale = chart.scales.x;
-                            const yScale = chart.scales.y;
-                            
-                            debtData.forEach((data, index) => {
-                                if (seizureMarkers.includes(data.date)) {
-                                    const x = xScale.getPixelForValue(index);
-                                    ctx.save();
-                                    ctx.strokeStyle = '#c1566c';
-                                    ctx.lineWidth = 3;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.beginPath();
-                                    ctx.moveTo(x, yScale.top);
-                                    ctx.lineTo(x, yScale.bottom);
-                                    ctx.stroke();
-                                    ctx.restore();
-                                }
-                            });
-                        }
-                    }]
+                    }
                 });
             }
 
@@ -809,7 +767,6 @@
             
             if (healthCharts.sleep_ratios && healthCharts.sleep_ratios.length > 0) {
                 const ratioData = healthCharts.sleep_ratios;
-                const seizureMarkers = healthCharts.seizure_markers || [];
                 
                 charts.sleepRatios = new Chart(sleepRatiosCtx, {
                     type: 'line',
@@ -821,62 +778,43 @@
                                 data: ratioData.map(d => d.deep_ratio),
                                 borderColor: '#2d5a3d',
                                 backgroundColor: 'rgba(45,90,61,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                borderWidth: 1.5
                             },
                             {
                                 label: 'REM Sleep %',
                                 data: ratioData.map(d => d.rem_ratio),
                                 borderColor: '#4a7c59',
                                 backgroundColor: 'rgba(74,124,89,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                borderWidth: 1.5
                             },
                             {
                                 label: 'Core Sleep %',
                                 data: ratioData.map(d => d.core_ratio),
                                 borderColor: '#6fa86f',
                                 backgroundColor: 'rgba(111,168,111,0.1)',
-                                tension: 0.4,
+                                tension: 0.2,
                                 fill: true,
-                                pointRadius: 3
+                                pointRadius: 2,
+                                borderWidth: 1.5
                             }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: { duration: 0 },
                         plugins: { legend: { display: true, position: 'top' } },
                         scales: {
                             y: { beginAtZero: true, max: 100, title: { display: true, text: 'Percentage of Total Sleep' } },
                             x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
                         }
-                    },
-                    plugins: [{
-                        id: 'seizureLines',
-                        afterDatasetsDraw(chart) {
-                            const ctx = chart.ctx;
-                            const xScale = chart.scales.x;
-                            const yScale = chart.scales.y;
-                            
-                            ratioData.forEach((data, index) => {
-                                if (seizureMarkers.includes(data.date_str)) {
-                                    const x = xScale.getPixelForValue(index);
-                                    ctx.save();
-                                    ctx.strokeStyle = '#c1566c';
-                                    ctx.lineWidth = 3;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.beginPath();
-                                    ctx.moveTo(x, yScale.top);
-                                    ctx.lineTo(x, yScale.bottom);
-                                    ctx.stroke();
-                                    ctx.restore();
-                                }
-                            });
-                        }
-                    }]
+                    }
                 });
             }
         }
@@ -975,8 +913,8 @@
             if (charts.monthly) charts.monthly.destroy();
             charts.monthly = new Chart(monthlyCtx, {
                 type: 'line',
-                data: { labels: chartsData.monthly_frequency.map(m => m.month), datasets: [{ label: 'Seizures', data: chartsData.monthly_frequency.map(m => m.count), borderColor: '#2d5a3d', backgroundColor: 'rgba(45,90,61,0.15)', tension: 0.4, fill: true }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                data: { labels: chartsData.monthly_frequency.map(m => m.month), datasets: [{ label: 'Seizures', data: chartsData.monthly_frequency.map(m => m.count), borderColor: '#2d5a3d', backgroundColor: 'rgba(45,90,61,0.15)', tension: 0.2, fill: true, pointRadius: 3, pointHoverRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
             });
 
             // Duration
@@ -985,7 +923,7 @@
             charts.duration = new Chart(durationCtx, {
                 type: 'bar',
                 data: { labels: chartsData.duration_distribution.map(d => d.range), datasets: [{ label: 'Count', data: chartsData.duration_distribution.map(d => d.count), backgroundColor: '#4a7c59' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
             });
 
             // Time between seizures
@@ -993,8 +931,8 @@
             if (charts.timeInterval) charts.timeInterval.destroy();
             charts.timeInterval = new Chart(timeIntervalCtx, {
                 type: 'line',
-                data: { labels: chartsData.time_between_seizures.map((_, i) => `Interval ${i + 1}`), datasets: [{ label: 'Days', data: chartsData.time_between_seizures.map(t => t.days_since_previous), borderColor: '#c1566c', backgroundColor: 'rgba(193,86,108,0.1)', tension: 0.4, fill: true }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { color: 'rgba(45,90,61,0.05)' } } } }
+                data: { labels: chartsData.time_between_seizures.map((_, i) => `Interval ${i + 1}`), datasets: [{ label: 'Days', data: chartsData.time_between_seizures.map(t => t.days_since_previous), borderColor: '#c1566c', backgroundColor: 'rgba(193,86,108,0.1)', tension: 0.2, fill: true, pointRadius: 3 }] },
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { color: 'rgba(45,90,61,0.05)' } } } }
             });
 
             // Heatmap (horizontal - hours across, days down)
@@ -1007,7 +945,7 @@
             charts.hour = new Chart(hourCtx, {
                 type: 'bar',
                 data: { labels: hourLabels, datasets: [{ label: 'Seizures', data: chartsData.hour_frequency.map(h => h.count), backgroundColor: '#2d5a3d' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
             });
 
             // Day of week
@@ -1016,7 +954,7 @@
             charts.day = new Chart(dayCtx, {
                 type: 'bar',
                 data: { labels: chartsData.day_frequency.map(d => d.day), datasets: [{ label: 'Seizures', data: chartsData.day_frequency.map(d => d.count), backgroundColor: '#4a7c59' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
             });
 
             // Food vs duration
@@ -1025,7 +963,7 @@
             charts.food = new Chart(foodCtx, {
                 type: 'bar',
                 data: { labels: ['With Food','Without Food'], datasets: [{ label: 'Avg Duration', data: [chartsData.food_analysis.food_eaten_avg, chartsData.food_analysis.no_food_avg], backgroundColor: ['#4a7c59','#8b7355'] }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
             });
         }
 
@@ -1034,27 +972,20 @@
             if (charts.pain) charts.pain.destroy();
             
             if (!painData || !painData.pain_timeline || painData.pain_timeline.length === 0) {
-                // No pain data available
                 return;
             }
             
-            // Extract pain data points with timestamps
             const painLabels = painData.pain_timeline.map(p => p.timestamp);
             const painValues = painData.pain_timeline.map(p => p.pain);
-            
-            // Create seizure marker points - map each seizure to its actual position
             const seizureData = [];
+            
             painData.seizure_markers.forEach(seizure => {
                 const seizureTimestamp = seizure.timestamp;
-                
-                // Find if this exact timestamp exists in pain timeline
                 const exactIndex = painLabels.indexOf(seizureTimestamp);
                 
                 if (exactIndex !== -1) {
-                    // Exact match found
                     seizureData.push(painValues[exactIndex]);
                 } else {
-                    // Find closest timestamp
                     const seizureTime = new Date(seizureTimestamp).getTime();
                     let closestIndex = 0;
                     let closestDiff = Math.abs(new Date(painLabels[0]).getTime() - seizureTime);
@@ -1070,36 +1001,29 @@
                 }
             });
             
-            // Create combined labels that include both pain and seizure timestamps
             const allTimestamps = [...painLabels];
             const seizureTimestamps = painData.seizure_markers.map(s => s.timestamp);
             
-            // Add seizure timestamps that aren't already in pain data
             seizureTimestamps.forEach(st => {
                 if (!allTimestamps.includes(st)) {
                     allTimestamps.push(st);
                 }
             });
             
-            // Sort all timestamps
             allTimestamps.sort((a, b) => new Date(a) - new Date(b));
             
-            // Map pain values to all timestamps (null for seizure-only timestamps)
             const allPainValues = allTimestamps.map(ts => {
                 const idx = painLabels.indexOf(ts);
                 return idx !== -1 ? painValues[idx] : null;
             });
             
-            // Map seizure markers to all timestamps (null for non-seizure timestamps)
             const allSeizureValues = allTimestamps.map(ts => {
                 const seizureIdx = seizureTimestamps.indexOf(ts);
                 if (seizureIdx !== -1) {
-                    // Find closest pain value for this seizure timestamp
                     const painIdx = painLabels.indexOf(ts);
                     if (painIdx !== -1) {
                         return painValues[painIdx];
                     } else {
-                        // Interpolate between closest pain points
                         const seizureTime = new Date(ts).getTime();
                         let closestIdx = 0;
                         let closestDiff = Math.abs(new Date(painLabels[0]).getTime() - seizureTime);
@@ -1117,27 +1041,28 @@
                 return null;
             });
             
-            // Create datasets
             const datasets = [
                 {
                     label: 'Pain Level',
                     data: allPainValues,
                     borderColor: '#2d5a3d',
                     backgroundColor: 'rgba(45,90,61,0.1)',
-                    tension: 0.4,
+                    tension: 0.3,
                     fill: true,
-                    pointRadius: 4,
+                    pointRadius: 2,
+                    pointHoverRadius: 3,
                     pointBackgroundColor: '#2d5a3d',
-                    spanGaps: true
+                    spanGaps: true,
+                    borderWidth: 1.5
                 }
             ];
             
-            // Add seizure markers if any exist
             if (allSeizureValues.some(v => v !== null)) {
                 datasets.push({
                     label: 'Seizure Event',
                     data: allSeizureValues,
-                    pointRadius: 8,
+                    pointRadius: 6,
+                    pointHoverRadius: 7,
                     pointBackgroundColor: '#c1566c',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
@@ -1155,12 +1080,15 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: { duration: 0 },
                     plugins: {
                         legend: {
                             display: true,
                             position: 'top'
                         },
                         tooltip: {
+                            mode: 'index',
+                            intersect: false,
                             callbacks: {
                                 title: function(context) {
                                     return context[0].label;
@@ -1219,10 +1147,17 @@
             tbody.innerHTML = filtered.slice(0, 50).map(record => `<tr><td>${record.timestamp}</td><td>${record.duration_seconds}s</td><td>${String(record.hour_of_day).padStart(2,'0')}:00</td><td>${record.day_of_week}</td><td><span class="${record.period ? 'period-yes' : 'period-no'}">${record.period ? 'Yes' : 'No'}</span></td><td><span class="${record.food_eaten ? 'food-yes' : 'food-no'}">${record.food_eaten ? 'Yes' : 'No'}</span></td></tr>`).join('');
         }
 
+        let filterTimeout;
         function initializeFilterListeners() {
-            document.getElementById('periodFilter').addEventListener('change', () => { if (window.originalTimeline) applyTableFilters(window.originalTimeline); });
-            document.getElementById('foodFilter').addEventListener('change', () => { if (window.originalTimeline) applyTableFilters(window.originalTimeline); });
-            document.getElementById('dateFilter').addEventListener('change', () => { if (window.originalTimeline) applyTableFilters(window.originalTimeline); });
+            const applyFilters = () => {
+                clearTimeout(filterTimeout);
+                filterTimeout = setTimeout(() => {
+                    if (window.originalTimeline) applyTableFilters(window.originalTimeline);
+                }, 300); // Debounce for 300ms
+            };
+            document.getElementById('periodFilter').addEventListener('change', applyFilters);
+            document.getElementById('foodFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateFilter').addEventListener('change', applyFilters);
         }
 
         function exportData() {
@@ -1230,7 +1165,8 @@
             const originalText = exportBtn.textContent;
             exportBtn.textContent = 'Exporting...';
             exportBtn.disabled = true;
-            fetch('/api/export')
+            
+            fetch('/api/export', { priority: 'high' })
                 .then(response => { if (!response.ok) throw new Error('Export failed'); return response.blob(); })
                 .then(blob => {
                     const url = window.URL.createObjectURL(blob);
@@ -1251,7 +1187,7 @@
         initializeFilterListeners();
         document.getElementById('exportBtn').addEventListener('click', exportData);
         document.getElementById('refreshBtn').addEventListener('click', () => { document.getElementById('refreshBtn').textContent = 'Refreshing...'; loadData(); setTimeout(() => { document.getElementById('refreshBtn').textContent = 'Refresh'; }, 1000); });
-        setInterval(loadData, 30000);
+        setInterval(loadData, 120000);
     </script>
 </body>
 </html>

@@ -4,8 +4,43 @@ import json
 from datetime import datetime, timedelta
 import os
 import numpy as np
+from threading import Lock
 
 app = Flask(__name__)
+
+# Caching setup
+class CachedDataStore:
+    def __init__(self):
+        self.lock = Lock()
+        self.data_cache = {}
+        self.cache_timestamp = {}
+        self.CACHE_DURATION = 60  # Cache for 60 seconds
+    
+    def get(self, key):
+        with self.lock:
+            if key in self.data_cache:
+                if (datetime.now() - self.cache_timestamp[key]).total_seconds() < self.CACHE_DURATION:
+                    return self.data_cache[key]
+                else:
+                    del self.data_cache[key]
+                    del self.cache_timestamp[key]
+            return None
+    
+    def set(self, key, value):
+        with self.lock:
+            self.data_cache[key] = value
+            self.cache_timestamp[key] = datetime.now()
+    
+    def invalidate(self, key=None):
+        with self.lock:
+            if key:
+                self.data_cache.pop(key, None)
+                self.cache_timestamp.pop(key, None)
+            else:
+                self.data_cache.clear()
+                self.cache_timestamp.clear()
+
+cache_store = CachedDataStore()
 
 # Resolve CSV file paths: check server absolute path first, then Docker mount, then local Data folder
 SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
@@ -73,76 +108,53 @@ def load_prediction_data():
         return {}
     
 def load_apple_watch_data():
-    """Load and process Apple Watch data from CSV file with robust error handling"""
+    """Load and process Apple Watch data from CSV file with caching"""
+    cache_key = 'apple_watch_data'
+    cached_data = cache_store.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
     try:
         if not os.path.exists(APPLE_WATCH_CSV):
-            print(f"[WATCH] Apple Watch CSV not found at {APPLE_WATCH_CSV}")
             return pd.DataFrame()
             
-        # Read CSV with proper handling of empty values
+        # Read CSV with dtype optimization - minimal columns
         df = pd.read_csv(APPLE_WATCH_CSV, na_values=['', ' ', 'NA', 'N/A'])
         df.columns = df.columns.str.strip()
         
-        print(f"[WATCH] Loaded {len(df)} rows from Apple Watch CSV")
-        print(f"[WATCH] Columns: {df.columns.tolist()}")
-        
         # Parse timestamp
         df['timestamp'] = pd.to_datetime(df['Date/Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
-        
-        # Drop rows with invalid timestamps
-        initial_count = len(df)
         df = df.dropna(subset=['timestamp'])
-        dropped_count = initial_count - len(df)
-        if dropped_count > 0:
-            print(f"[WATCH] Dropped {dropped_count} rows with invalid timestamps")
-        
         df = df.sort_values('timestamp', ascending=True)
-        
-        # Extract date for daily aggregation
         df['date'] = df['timestamp'].dt.date
         
-        # Convert numeric columns, replacing empty strings with NaN first
+        # Convert numeric columns in batch
         numeric_columns = [
-            'Heart Rate [Min] (count/min)',
-            'Heart Rate [Max] (count/min)',
-            'Heart Rate [Avg] (count/min)',
-            'Sleep Analysis [Total] (hr)',
-            'Sleep Analysis [Asleep] (hr)',
-            'Sleep Analysis [In Bed] (hr)',
-            'Sleep Analysis [Core] (hr)',
-            'Sleep Analysis [Deep] (hr)',
-            'Sleep Analysis [REM] (hr)',
-            'Sleep Analysis [Awake] (hr)',
-            'Walking + Running Distance (mi)'
+            'Heart Rate [Min] (count/min)', 'Heart Rate [Max] (count/min)', 'Heart Rate [Avg] (count/min)',
+            'Sleep Analysis [Total] (hr)', 'Sleep Analysis [Deep] (hr)', 'Sleep Analysis [REM] (hr)',
+            'Sleep Analysis [Core] (hr)', 'Sleep Analysis [Awake] (hr)', 'Walking + Running Distance (mi)'
         ]
         
         for col in numeric_columns:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
         
-        print(f"[WATCH] Successfully processed {len(df)} rows")
-        
-        # Debug: Check sleep data availability
-        sleep_col = 'Sleep Analysis [Total] (hr)'
-        if sleep_col in df.columns:
-            non_null_sleep = df[sleep_col].notna().sum()
-            print(f"[WATCH] Non-null sleep records: {non_null_sleep}")
-            if non_null_sleep > 0:
-                print(f"[WATCH] Sample sleep values: {df[df[sleep_col].notna()][sleep_col].head().tolist()}")
-        
+        cache_store.set(cache_key, df)
         return df
         
     except Exception as e:
-        print(f"[WATCH] Error loading Apple Watch data: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"[WATCH] Error: {e}")
         return pd.DataFrame()
 
 def load_pain_data():
     """Load and process pain data from CSV file"""
+    cache_key = 'pain_data'
+    cached_data = cache_store.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
     try:
         if not os.path.exists(PAIN_CSV):
-            print(f"[PAIN] Pain CSV not found at {PAIN_CSV}")
             return pd.DataFrame()
             
         df = pd.read_csv(PAIN_CSV)
@@ -150,30 +162,33 @@ def load_pain_data():
         
         df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
         df = df.dropna(subset=['timestamp'])
-        df = df.sort_values('timestamp', ascending=True)
-        df = df[['timestamp', 'Pain']]
-        
-        # Convert pain to numeric
         df['Pain'] = pd.to_numeric(df['Pain'], errors='coerce')
         df = df.dropna(subset=['Pain'])
+        df = df[['timestamp', 'Pain']].sort_values('timestamp', ascending=True)
         
-        print(f"[PAIN] Loaded {len(df)} pain records")
+        cache_store.set(cache_key, df)
         return df
         
     except Exception as e:
-        print(f"[PAIN] Error loading pain data: {e}")
+        print(f"[PAIN] Error: {e}")
         return pd.DataFrame()
 
 def load_seizure_data():
     """Load and process seizure data from CSV file"""
+    cache_key = 'seizure_data'
+    cached_data = cache_store.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
     try:
         if not os.path.exists(SEIZURES_CSV):
-            print(f"[SEIZURE] Seizure CSV not found at {SEIZURES_CSV}")
             return pd.DataFrame()
             
         df = pd.read_csv(SEIZURES_CSV)
         
         df['timestamp'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+        df = df.dropna(subset=['timestamp'])
+        
         df['duration_seconds'] = pd.to_numeric(df['Duration'], errors='coerce')
         df['hour_of_day'] = df['timestamp'].dt.hour
         df['day_of_week'] = df['timestamp'].dt.day_name()
@@ -182,16 +197,14 @@ def load_seizure_data():
         df['period'] = df['Peiod'].astype(str).str.lower() == 'true'
         
         df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten', 'period']]
-        df = df.dropna(subset=['timestamp', 'duration_seconds'])
+        df = df.dropna(subset=['duration_seconds'])
         df = df.sort_values('timestamp', ascending=False)
         
-        print(f"[SEIZURE] Loaded {len(df)} seizure records")
+        cache_store.set(cache_key, df)
         return df
         
     except Exception as e:
-        print(f"[SEIZURE] Error loading seizure data: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"[SEIZURE] Error: {e}")
         return pd.DataFrame()
 
 def get_daily_sleep_metrics(watch_df):
@@ -767,33 +780,32 @@ def dashboard():
 
 @app.route('/api/data')
 def get_data():
-    print("\n[API] ===== Starting data load =====")
+    # Check cache first
+    cache_key = 'full_api_data'
+    cached_response = cache_store.get(cache_key)
+    if cached_response is not None:
+        return jsonify(cached_response)
     
     try:
+        # Load all data (now cached at individual dataframe level)
         seizure_df = load_seizure_data()
         pain_df = load_pain_data()
         watch_df = load_apple_watch_data()
         prediction_data = load_prediction_data()
         
-        print(f"[API] Data loaded - Seizures: {len(seizure_df)}, Pain: {len(pain_df)}, Watch: {len(watch_df)}")
-        
         stats = calculate_statistics(seizure_df)
         charts = prepare_chart_data(seizure_df)
         pain_charts = prepare_pain_chart_data(pain_df, seizure_df)
         
-        # New health insights
+        # Health insights (skip if no watch data)
         health_insights = {}
         health_charts = {}
         
         if not watch_df.empty:
-            print("[API] Calculating health insights...")
             health_insights['sleep_analysis'] = analyze_sleep_before_seizures(seizure_df, watch_df)
             health_insights['heart_rate_analysis'] = analyze_heart_rate_trends(seizure_df, watch_df)
             health_insights['activity_analysis'] = analyze_activity_correlation(seizure_df, watch_df)
             health_charts = prepare_health_chart_data(seizure_df, watch_df)
-            print(f"[API] Health insights generated: {list(health_insights.keys())}")
-        else:
-            print("[API] No watch data - skipping health insights")
         
         response_data = {
             'statistics': stats,
@@ -805,13 +817,11 @@ def get_data():
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
         
-        print("[API] ===== Data load complete =====\n")
+        # Cache the full response
+        cache_store.set(cache_key, response_data)
         return jsonify(response_data)
         
     except Exception as e:
-        print(f"[API] ERROR: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({
             'error': str(e),
             'statistics': {},
