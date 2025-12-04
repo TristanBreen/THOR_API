@@ -37,8 +37,19 @@ class SeizurePredictor:
             y_regression: Regression targets
             sample_weights: Optional sample weights (e.g., from prediction feedback)
         """
-        # Handle missing values
+        # Handle missing values - robust approach
+        X = X.copy()
+        
+        # First pass: fill with column means
         X = X.fillna(X.mean())
+        
+        # Second pass: fill any remaining NaNs (from columns with all NaN) with 0
+        X = X.fillna(0)
+        
+        # Check for any remaining NaN values
+        if X.isnull().any().any():
+            print("[WARNING] Found remaining NaN values after filling, dropping them")
+            X = X.fillna(method='bfill').fillna(method='ffill').fillna(0)
         
         # Scale features
         X_scaled = self.scaler.fit_transform(X)
@@ -89,6 +100,10 @@ class SeizurePredictor:
     
     def _train_classification(self, X_train, X_test, y_train, y_test, sample_weight=None):
         """Train seizure occurrence classifier"""
+        # Ensure no NaN values remain
+        X_train = X_train.fillna(X_train.mean()).fillna(0)
+        X_test = X_test.fillna(X_test.mean()).fillna(0)
+        
         # Try multiple models
         models = {
             'Random Forest': RandomForestClassifier(
@@ -126,6 +141,10 @@ class SeizurePredictor:
     
     def _train_regression(self, X_train, X_test, y_train, y_test, sample_weight=None):
         """Train time-to-next-seizure regressor"""
+        # Ensure no NaN values remain
+        X_train = X_train.fillna(X_train.mean()).fillna(0)
+        X_test = X_test.fillna(X_test.mean()).fillna(0)
+        
         model = RandomForestRegressor(
             n_estimators=200,
             max_depth=10,
