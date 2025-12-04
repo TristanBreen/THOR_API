@@ -8,6 +8,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import json
 import os
+import pytz
 
 from data_preprocessing import DataLoader
 from feature_engineering import FeatureEngineer
@@ -234,6 +235,7 @@ class SeizureForecaster:
         
         print("\n" + "=" * 70)
 
+
 def main():
     """Example usage"""
     forecaster = SeizureForecaster()
@@ -248,8 +250,9 @@ def main():
     max_prob_48 = forecast_48['seizure_probability'].max() * 100
     max_prob_72 = forecast_72['seizure_probability'].max() * 100
     
-    # Get current timestamp
-    current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    # Get current timestamp in Arizona timezone
+    arizona_tz = pytz.timezone('America/Phoenix')
+    current_time = datetime.now(arizona_tz).strftime('%Y-%m-%dT%H:%M:%S')
     
     # Format output for console and prediction.txt
     output_lines = [
