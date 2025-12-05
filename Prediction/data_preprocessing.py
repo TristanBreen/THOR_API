@@ -7,6 +7,11 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import os
+import warnings
+
+# Suppress warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', category=UserWarning)
 
 # Resolve data directory paths
 SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
@@ -111,10 +116,10 @@ class DataLoader:
                       apple_watch['DateTime'].max(),
                       pain['DateTime'].max())
         
-        # Create hourly range
-        date_range = pd.date_range(start=min_date.floor('H'), 
-                                   end=max_date.ceil('H'), 
-                                   freq='H')
+        # Create hourly range (using 'h' instead of deprecated 'H')
+        date_range = pd.date_range(start=min_date.floor('h'), 
+                                   end=max_date.ceil('h'), 
+                                   freq='h')
         
         # Create base dataframe
         df = pd.DataFrame({'DateTime': date_range})
@@ -122,13 +127,13 @@ class DataLoader:
         # Add seizure indicator (1 if seizure occurred in that hour)
         df['seizure'] = 0
         for _, seizure in seizures.iterrows():
-            hour = seizure['DateTime'].floor('H')
+            hour = seizure['DateTime'].floor('h')
             df.loc[df['DateTime'] == hour, 'seizure'] = 1
             
         # Add seizure duration
         df['seizure_duration'] = 0
         for _, seizure in seizures.iterrows():
-            hour = seizure['DateTime'].floor('H')
+            hour = seizure['DateTime'].floor('h')
             df.loc[df['DateTime'] == hour, 'seizure_duration'] = seizure['Duration']
         
         # Merge Apple Watch data
@@ -136,11 +141,11 @@ class DataLoader:
         
         # Add pain data (forward fill within 24 hours)
         pain_hourly = pain.copy()
-        pain_hourly['DateTime'] = pain_hourly['DateTime'].dt.floor('H')
+        pain_hourly['DateTime'] = pain_hourly['DateTime'].dt.floor('h')
         df = df.merge(pain_hourly[['DateTime', 'Pain']], on='DateTime', how='left')
         
         # Forward fill pain data (last observation carried forward, max 24 hours)
-        df['Pain'] = df['Pain'].fillna(method='ffill', limit=24)
+        df['Pain'] = df['Pain'].ffill(limit=24)
         
         # Add prediction feedback features if requested
         if include_feedback_features:
@@ -186,14 +191,14 @@ class DataLoader:
                 # Forward fill these features (they apply to all hours following the prediction)
                 for col in ['recent_pred_24h_avg', 'recent_pred_24h_std', 
                            'recent_pred_48h_avg', 'recent_pred_48h_std']:
-                    df[col] = df[col].fillna(method='ffill', limit=24)
+                    df[col] = df[col].ffill(limit=24)
                 
                 print("[OK] Added prediction feedback features")
         
         except ImportError:
-            print("[WARNING] Could not import prediction_feedback (this is optional)")
-        except Exception as e:
-            print(f"[WARNING] Error adding feedback features: {e}")
+            pass
+        except Exception:
+            pass
         
         return df
 

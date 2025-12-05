@@ -10,6 +10,11 @@ import seaborn as sns
 from scipy import stats
 import json
 import os
+import warnings
+
+# Suppress warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', category=UserWarning)
 
 from data_preprocessing import DataLoader
 from feature_engineering import FeatureEngineer
@@ -93,7 +98,7 @@ class TriggerAnalyzer:
             # Get hours before seizures
             pre_seizure_hrs = []
             for _, seizure in seizures.iterrows():
-                hour = seizure['DateTime'].floor('H')
+                hour = seizure['DateTime'].floor('h')
                 # Get 6 hours before seizure
                 pre_hours = df[
                     (df['DateTime'] >= hour - pd.Timedelta(hours=6)) & 
@@ -135,7 +140,7 @@ class TriggerAnalyzer:
             # Get sleep data before seizures
             sleep_before_seizure = []
             for _, seizure in seizures.iterrows():
-                hour = seizure['DateTime'].floor('H')
+                hour = seizure['DateTime'].floor('h')
                 # Get most recent sleep data (within 24 hours before)
                 recent_sleep = df[
                     (df['DateTime'] >= hour - pd.Timedelta(hours=24)) & 
@@ -179,7 +184,7 @@ class TriggerAnalyzer:
         if 'Pain' in df.columns:
             pain_before_seizure = []
             for _, seizure in seizures.iterrows():
-                hour = seizure['DateTime'].floor('H')
+                hour = seizure['DateTime'].floor('h')
                 # Get pain data 6 hours before
                 recent_pain = df[
                     (df['DateTime'] >= hour - pd.Timedelta(hours=6)) & 
@@ -223,7 +228,7 @@ class TriggerAnalyzer:
         if activity_col in df.columns:
             activity_before_seizure = []
             for _, seizure in seizures.iterrows():
-                hour = seizure['DateTime'].floor('H')
+                hour = seizure['DateTime'].floor('h')
                 # Get activity in 6 hours before
                 recent_activity = df[
                     (df['DateTime'] >= hour - pd.Timedelta(hours=6)) & 
