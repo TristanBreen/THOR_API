@@ -42,7 +42,7 @@ class DataLoader:
         df['Duration'] = pd.to_numeric(df['Duration'], errors='coerce')
         
         # Convert boolean columns
-        df['Peiod'] = df['Peiod'].map({'True': True, 'False': False, 'NULL': None})
+        df['Period'] = df['Period'].map({'True': True, 'False': False, 'NULL': None})
         df['Eaten'] = df['Eaten'].map({'True': True, 'False': False, 'NULL': None})
         
         # Fill Food Eaten nulls

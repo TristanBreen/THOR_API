@@ -194,7 +194,7 @@ def load_seizure_data():
         df['day_of_week'] = df['timestamp'].dt.day_name()
         df['date'] = df['timestamp'].dt.date
         df['food_eaten'] = df['Eaten'].astype(str).str.lower() == 'true'
-        df['period'] = df['Peiod'].astype(str).str.lower() == 'true'
+        df['period'] = df['Period'].astype(str).str.lower() == 'true'
         
         df = df[['timestamp', 'duration_seconds', 'hour_of_day', 'day_of_week', 'date', 'food_eaten', 'period']]
         df = df.dropna(subset=['duration_seconds'])

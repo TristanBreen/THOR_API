@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import json
 import os
 import pytz
+import tempfile
 
 from data_preprocessing import DataLoader
 from feature_engineering import FeatureEngineer
@@ -265,10 +266,23 @@ def main():
     for line in output_lines:
         print(line)
     
-    # Write to prediction.txt (overwrites)
+    # Write to prediction.txt (overwrites) using atomic write
     output_text = "\n".join(output_lines)
-    with open(PREDICTION_TXT, 'w', encoding='utf-8') as f:
-        f.write(output_text)
+    temp_fd, temp_path = tempfile.mkstemp(
+        dir=os.path.dirname(PREDICTION_TXT) or '.', 
+        suffix='.tmp',
+        prefix='prediction_'
+    )
+    try:
+        with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+            f.write(output_text)
+        os.replace(temp_path, PREDICTION_TXT)  # Atomic operation
+    except Exception as e:
+        try:
+            os.unlink(temp_path)
+        except Exception:
+            pass
+        raise Exception(f"Failed to write prediction file: {e}") from e
     
     # Append to longTermPredictions.json with timestamp
     # Create new entry
@@ -291,9 +305,22 @@ def main():
     # Append new entry
     predictions_list.append(new_entry)
     
-    # Write updated list back to file
-    with open(LONG_TERM_JSON, 'w', encoding='utf-8') as f:
-        json.dump(predictions_list, f, indent=2, ensure_ascii=False)
+    # Write updated list back to file using atomic write
+    temp_fd, temp_path = tempfile.mkstemp(
+        dir=os.path.dirname(LONG_TERM_JSON) or '.',
+        suffix='.tmp',
+        prefix='predictions_'
+    )
+    try:
+        with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+            json.dump(predictions_list, f, indent=2, ensure_ascii=False)
+        os.replace(temp_path, LONG_TERM_JSON)  # Atomic operation
+    except Exception as e:
+        try:
+            os.unlink(temp_path)
+        except Exception:
+            pass
+        raise Exception(f"Failed to write predictions JSON file: {e}") from e
     
     return forecaster
 
