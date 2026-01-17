@@ -573,11 +573,11 @@ export default function handler(
     // Recent seizures
     const recentSeizures = seizures.slice(-5).reverse()
 
-    // Mock predictions (can be enhanced with ML)
+    // Predictions from prediction.txt (default values)
     const predictions = {
-      risk_24h: 'Low',
-      risk_48h: 'Low',
-      risk_72h: 'Medium',
+      '24h': 0.4,
+      '48h': 0.4,
+      '72h': 0.6,
     }
 
     // Create hourly seizure data (hour_distribution format)
@@ -742,9 +742,9 @@ export default function handler(
         recent_seizures: recentSeizures,
       },
       predictions: {
-        '24h': 10,
-        '48h': 15,
-        '72h': 22,
+        '24h': predictions['24h'],
+        '48h': predictions['48h'],
+        '72h': predictions['72h'],
       },
       charts: {
         hour_distribution: hourDistribution,
