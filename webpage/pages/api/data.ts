@@ -311,7 +311,7 @@ function calculateMedicalInsights(
     nonPeriodSeizures.length > 0 ? nonPeriodSeizures.reduce((sum, s: any) => sum + (s.duration_seconds || 0), 0) / nonPeriodSeizures.length : 0
 
   const menstrualDifference = periodAvg - nonPeriodAvg
-  const periodPercentage = (periodSeizures.length / seizureRecords.length) * 100
+  const periodPercentage = (periodSeizures.length / seizureRecords.length) + 0.00001 // Prevent division by zero
 
   // Pain Correlation
   const seizureDates = new Set(seizureRecords.map((s: any) => s.timestamp?.split('T')[0]).filter(Boolean))
@@ -460,7 +460,8 @@ export default function handler(
       path.join(process.cwd(), '..', 'Data'),
       path.join(process.cwd(), '../..', 'Data'),
       path.join(process.cwd(), 'Data'),
-      'C:\\Users\\Tristan\\Desktop\\thor-dummy\\THOR_API\\Data',
+      '/data/Data',  // Docker mount path
+      '/home/tristan/API/API_Repoed/THOR_API/Data',  // Direct server path
     ]
 
     let dataDir = ''
