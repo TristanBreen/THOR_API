@@ -311,7 +311,7 @@ function calculateMedicalInsights(
     nonPeriodSeizures.length > 0 ? nonPeriodSeizures.reduce((sum, s: any) => sum + (s.duration_seconds || 0), 0) / nonPeriodSeizures.length : 0
 
   const menstrualDifference = periodAvg - nonPeriodAvg
-  const periodPercentage = (periodSeizures.length / seizureRecords.length) + 0.00001 // Prevent division by zero
+  const periodPercentage = (periodSeizures.length / seizureRecords.length) * 100
 
   // Pain Correlation
   const seizureDates = new Set(seizureRecords.map((s: any) => s.timestamp?.split('T')[0]).filter(Boolean))
@@ -352,7 +352,8 @@ function calculateMedicalInsights(
   const minInterval = intervals.length > 0 ? Math.min(...intervals) : 0
   const maxInterval = intervals.length > 0 ? Math.max(...intervals) : 0
   const avgInterval = intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 0
-  const medianInterval = intervals.length > 0 ? intervals.sort((a, b) => a - b)[Math.floor(intervals.length / 2)] : 0
+  const sortedIntervals = [...intervals].sort((a, b) => a - b)
+  const medianInterval = sortedIntervals.length > 0 ? sortedIntervals[Math.floor(sortedIntervals.length / 2)] : 0
 
   // Duration Trend (over time)
   const durationTrend = sortedSeizures.map((s: any, idx: number) => ({
@@ -718,7 +719,7 @@ export default function handler(
         hour_of_day: parseInt(time.split(':')[0]) || 0,
         day_of_week: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
         period: s['Peiod'] === 'True' || s['Peiod'] === true,
-        food_eaten: s['Food Eaten'] && s['Food Eaten'].trim() ? true : false,
+        food_eaten: s['Eaten'] === 'True' || s['Eaten'] === true,
       }
     })
 
