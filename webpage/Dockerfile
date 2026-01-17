@@ -1,21 +1,24 @@
-FROM python:3.10-slim
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Copy package files
+COPY package.json package-lock.json ./
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN npm ci
 
 # Copy application code
 COPY . .
 
-# Expose Flask port
+# Build Next.js application
+RUN npm run build
+
+# Expose port
 EXPOSE 5000
 
-# Run the Flask application
-CMD ["python", "app.py"]
+# Set production environment
+ENV NODE_ENV=production
+
+# Run the Next.js application
+CMD ["npm", "start"]
