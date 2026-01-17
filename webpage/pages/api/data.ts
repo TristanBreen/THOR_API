@@ -455,21 +455,25 @@ export default function handler(
   res: NextApiResponse<DashboardData | { error: string }>
 ) {
   try {
-    // Mimic Python's approach: check server path first, then fallback to relative
-    const SERVER_BASE_PATH = "/home/tristan/API/API_Repoed/THOR_API"
-    const APP_DIR = path.dirname(__filename)
-
+    // Resolve Data directory - check multiple paths
     let dataDir = ''
+    
     const possiblePaths = [
-      path.join(SERVER_BASE_PATH, "Data"),  // Server absolute path (checked first)
-      path.join(process.cwd(), "..", "Data"),  // Relative to cwd (webpage directory)
-      path.join(APP_DIR, "..", "..", "..", "Data"),  // Relative to this file
+      // Server production paths (Docker and direct)
+      '/home/tristan/API/API_Repoed/THOR_API/Data',
+      '/data/Data',
+      // Relative to process cwd (development and some deployment scenarios)
+      path.join(process.cwd(), 'Data'),
+      path.join(process.cwd(), '..', 'Data'),
+      path.join(process.cwd(), '../..', 'Data'),
+      // Fallback
+      './Data',
     ]
 
     for (const p of possiblePaths) {
-      console.log('Checking path:', p, 'exists:', fs.existsSync(p))
       if (fs.existsSync(p)) {
         dataDir = p
+        console.log('Using data directory:', dataDir)
         break
       }
     }
