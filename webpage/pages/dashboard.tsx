@@ -88,7 +88,7 @@ export default function Dashboard() {
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
       </Head>
 
-      <main className="min-h-screen bg-gradient-to-br from-sage-50 via-cream-50 to-cream-100">
+      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
         {/* Header */}
         <Header
           isLoading={isLoading}
@@ -124,7 +124,7 @@ export default function Dashboard() {
           {/* Medical Insights Section */}
           {data && (
             <section className="mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Advanced Medical Insights</h2>
+              <h2 className="text-3xl font-bold text-slate-100 mb-6">Advanced Medical Insights</h2>
               <MedicalInsights medicalInsights={data.medical_insights} medicalCharts={data.medical_charts} isLoading={isLoading} />
             </section>
           )}

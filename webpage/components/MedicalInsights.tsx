@@ -87,52 +87,52 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
       {/* Food Impact Analysis */}
       {activeTab === 'food' && (
         <div className="space-y-4">
-          <div className="card bg-gradient-to-br from-blue-50 to-cyan-50">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Food Intake Impact on Seizure Duration</h3>
+          <div className="card bg-gradient-to-br from-blue-900/30 to-cyan-900/30">
+            <h3 className="text-xl font-bold text-slate-100 mb-4">Food Intake Impact on Seizure Duration</h3>
 
             <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white p-4 rounded-lg border-l-4 border-blue-500">
-                <div className="text-sm text-gray-600">With Food</div>
-                <div className="text-3xl font-bold text-blue-600">{food_impact.with_food_avg}</div>
-                <div className="text-xs text-gray-500">avg seconds ({food_impact.food_eaters} events)</div>
+              <div className="bg-slate-800/40 p-4 rounded-lg border-l-4 border-blue-500">
+                <div className="text-sm text-slate-300">With Food</div>
+                <div className="text-3xl font-bold text-blue-400">{food_impact.with_food_avg}</div>
+                <div className="text-xs text-slate-400">avg seconds ({food_impact.food_eaters} events)</div>
               </div>
-              <div className="bg-white p-4 rounded-lg border-l-4 border-gray-500">
-                <div className="text-sm text-gray-600">Without Food</div>
-                <div className="text-3xl font-bold text-gray-600">{food_impact.without_food_avg}</div>
-                <div className="text-xs text-gray-500">avg seconds ({food_impact.non_eaters} events)</div>
+              <div className="bg-slate-800/40 p-4 rounded-lg border-l-4 border-slate-500">
+                <div className="text-sm text-slate-300">Without Food</div>
+                <div className="text-3xl font-bold text-slate-300">{food_impact.without_food_avg}</div>
+                <div className="text-xs text-slate-400">avg seconds ({food_impact.non_eaters} events)</div>
               </div>
               <div
                 className={`p-4 rounded-lg border-l-4 ${
                   food_impact.difference > 0
-                    ? 'bg-red-50 border-red-500'
+                    ? 'bg-red-900/20 border-red-500'
                     : food_impact.difference < 0
-                      ? 'bg-green-50 border-green-500'
-                      : 'bg-gray-50 border-gray-500'
+                      ? 'bg-green-900/20 border-green-500'
+                      : 'bg-slate-800/40 border-slate-500'
                 }`}
               >
-                <div className="text-sm text-gray-600">Difference</div>
-                <div className={`text-3xl font-bold ${food_impact.difference > 0 ? 'text-red-600' : food_impact.difference < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                <div className="text-sm text-slate-300">Difference</div>
+                <div className={`text-3xl font-bold ${food_impact.difference > 0 ? 'text-red-400' : food_impact.difference < 0 ? 'text-green-400' : 'text-slate-300'}`}>
                   {food_impact.difference > 0 ? '+' : ''}{food_impact.difference}
                 </div>
-                <div className="text-xs text-gray-500">Seizures are {food_impact.trend}</div>
+                <div className="text-xs text-slate-400">Seizures are {food_impact.trend}</div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-4">Duration Comparison</h4>
+            <div className="bg-slate-800/40 p-4 rounded-lg">
+              <h4 className="font-semibold text-slate-200 mb-4">Duration Comparison</h4>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={medicalCharts.food_impact_comparison}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" />
-                  <YAxis label={{ value: 'Duration (seconds)', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.5)" />
+                  <XAxis dataKey="category" stroke="rgba(148,163,184,0.8)" />
+                  <YAxis label={{ value: 'Duration (seconds)', angle: -90, position: 'insideLeft', fill: 'rgba(148,163,184,0.8)' }} stroke="rgba(148,163,184,0.8)" />
+                  <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', color: '#e2e8f0' }} />
                   <Bar dataKey="avg_duration" fill="#3B82F6" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-              <p className="text-sm text-blue-900">
+            <div className="mt-4 p-4 bg-blue-900/20 border border-blue-700 rounded">
+              <p className="text-sm text-blue-300">
                 <span className="font-semibold">Clinical Insight:</span> Food intake{' '}
                 {food_impact.difference > 30
                   ? 'significantly prolongs'
@@ -153,30 +153,30 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
       {/* Menstrual Cycle Analysis */}
       {activeTab === 'menstrual' && (
         <div className="space-y-4">
-          <div className="card bg-gradient-to-br from-pink-50 to-rose-50">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Menstrual Cycle Analysis</h3>
+          <div className="card bg-gradient-to-br from-pink-900/30 to-rose-900/30">
+            <h3 className="text-xl font-bold text-slate-100 mb-4">Menstrual Cycle Analysis</h3>
 
             <div className="grid md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white p-4 rounded-lg border-l-4 border-pink-500">
-                <div className="text-sm text-gray-600">During Period</div>
-                <div className="text-3xl font-bold text-pink-600">{menstrual_analysis.period_avg_duration}</div>
-                <div className="text-xs text-gray-500">avg seconds ({menstrual_analysis.period_seizure_count} events)</div>
+              <div className="bg-slate-800/40 p-4 rounded-lg border-l-4 border-pink-500">
+                <div className="text-sm text-slate-300">During Period</div>
+                <div className="text-3xl font-bold text-pink-400">{menstrual_analysis.period_avg_duration}</div>
+                <div className="text-xs text-slate-400">avg seconds ({menstrual_analysis.period_seizure_count} events)</div>
               </div>
-              <div className="bg-white p-4 rounded-lg border-l-4 border-purple-500">
-                <div className="text-sm text-gray-600">Outside Period</div>
-                <div className="text-3xl font-bold text-purple-600">{menstrual_analysis.non_period_avg_duration}</div>
-                <div className="text-xs text-gray-500">avg seconds</div>
+              <div className="bg-slate-800/40 p-4 rounded-lg border-l-4 border-purple-500">
+                <div className="text-sm text-slate-300">Outside Period</div>
+                <div className="text-3xl font-bold text-purple-400">{menstrual_analysis.non_period_avg_duration}</div>
+                <div className="text-xs text-slate-400">avg seconds</div>
               </div>
-              <div className="bg-white p-4 rounded-lg border-l-4 border-rose-500">
-                <div className="text-sm text-gray-600">Period Seizures</div>
-                <div className="text-3xl font-bold text-rose-600">{menstrual_analysis.period_percentage}%</div>
-                <div className="text-xs text-gray-500">of total seizures</div>
+              <div className="bg-slate-800/40 p-4 rounded-lg border-l-4 border-rose-500">
+                <div className="text-sm text-slate-300">Period Seizures</div>
+                <div className="text-3xl font-bold text-rose-400">{menstrual_analysis.period_percentage}%</div>
+                <div className="text-xs text-slate-400">of total seizures</div>
               </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-4">Duration Comparison</h4>
+              <div className="bg-slate-800/40 p-4 rounded-lg">
+                <h4 className="font-semibold text-slate-200 mb-4">Duration Comparison</h4>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
@@ -193,7 +193,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
                       <Cell fill="#EC4899" />
                       <Cell fill="#A78BFA" />
                     </Pie>
-                    <Tooltip />
+                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', color: '#e2e8f0' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
