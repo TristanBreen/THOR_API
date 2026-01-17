@@ -1,12 +1,15 @@
 from flask import Flask, render_template, jsonify
+from flask_cors import CORS
 import pandas as pd
 import json
 from datetime import datetime, timedelta
 import os
 import numpy as np
 from threading import Lock
+from pnes_analyzer import analyze_pnes_indicators
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for React frontend
 
 # Caching setup
 class CachedDataStore:
@@ -807,12 +810,16 @@ def get_data():
             health_insights['activity_analysis'] = analyze_activity_correlation(seizure_df, watch_df)
             health_charts = prepare_health_chart_data(seizure_df, watch_df)
         
+        # PNES Detection Analysis
+        pnes_analysis = analyze_pnes_indicators(seizure_df, pain_df, watch_df)
+        
         response_data = {
             'statistics': stats,
             'charts': charts,
             'pain_charts': pain_charts,
             'health_insights': health_insights,
             'health_charts': health_charts,
+            'pnes_analysis': pnes_analysis,
             'predictions': prediction_data, 
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }

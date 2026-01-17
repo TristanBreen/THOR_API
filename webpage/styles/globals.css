@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-sage-50 via-cream-50 to-cream-100 text-sage-900;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white/80 backdrop-blur-md rounded-lg shadow-soft hover:shadow-hover transition-all duration-300;
+  }
+
+  .card-dark {
+    @apply bg-sage-900/80 backdrop-blur-md rounded-lg shadow-soft text-cream-50;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-sage-600 to-sage-700 text-cream-50 rounded-lg font-semibold hover:from-sage-700 hover:to-sage-800 transition-all duration-300 hover:shadow-hover active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-cream-200 text-sage-900 rounded-lg font-semibold hover:bg-cream-300 transition-all duration-300 hover:shadow-soft;
+  }
+
+  .stat-card {
+    @apply card p-6 border-l-4 border-sage-500 hover:scale-105 transition-transform duration-300;
+  }
+
+  .insight-item {
+    @apply flex items-start gap-4 py-4 border-b border-cream-200 last:border-b-0;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-sage-600 to-rose-500 bg-clip-text text-transparent;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
