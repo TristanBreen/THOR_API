@@ -719,8 +719,8 @@ export default function handler(
     const seizureRecords = seizures.map((s) => {
       const date = s.Date || '2025-01-01'
       const time = s.Time || '00:00:00'
-      // Create valid ISO string
-      const timestamp = `${date}T${time}.000Z`
+      // Create timestamp as local time (not UTC) to match the date/time in the CSV
+      const timestamp = `${date}T${time}`
       // Parse date as local date (not UTC) to avoid timezone offset issues
       const [year, month, day] = date.split('-').map(Number)
       const dateObj = new Date(year, month - 1, day)
@@ -729,8 +729,8 @@ export default function handler(
         duration_seconds: parseInt(s.Duration) || 0,
         hour_of_day: parseInt(time.split(':')[0]) || 0,
         day_of_week: dateObj.toLocaleDateString('en-US', { weekday: 'long' }),
-        period: s['Peiod'] === 'True' || s['Peiod'] === true,
-        food_eaten: s['Eaten'] === 'True' || s['Eaten'] === true,
+        period: s['Peiod'] === 'True',
+        food_eaten: s['Eaten'] === 'True',
       }
     })
 
