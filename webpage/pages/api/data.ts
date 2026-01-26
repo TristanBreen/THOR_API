@@ -336,24 +336,31 @@ function calculateMedicalInsights(
 
   const correlationPercentage = (painOnSeizureDays / (painRecords?.length || 1)) * 100
 
-  // Inter-seizure Intervals
+  // Inter-seizure Intervals - Helper function to parse local time
+  const parseLocalTime = (timestamp: string) => {
+    // Format is YYYY-MM-DDTHH:MM:SS
+    const parts = timestamp.split('T')
+    if (parts.length < 2) return 0
+    const datePart = parts[0]
+    const timePart = parts[1]
+    const [year, month, day] = datePart.split('-').map(Number)
+    const [hours, minutes, seconds] = (timePart || '00:00:00').split(':').map(Number)
+    return new Date(year, month - 1, day, hours, minutes, seconds).getTime()
+  }
+
   const sortedSeizures = [...seizureRecords].sort((a: any, b: any) => a.timestamp.localeCompare(b.timestamp))
   const intervals: number[] = []
 
   for (let i = 1; i < sortedSeizures.length; i++) {
-    // Parse timestamp as local time: format is YYYY-MM-DDTHH:MM:SS
-    const parseLocalTime = (timestamp: string) => {
-      const [datePart, timePart] = timestamp.split('T')
-      const [year, month, day] = datePart.split('-').map(Number)
-      const [hours, minutes, seconds] = timePart.split(':').map(Number)
-      return new Date(year, month - 1, day, hours, minutes, seconds).getTime()
-    }
-    
     const prevTime = parseLocalTime(sortedSeizures[i - 1].timestamp)
     const currTime = parseLocalTime(sortedSeizures[i].timestamp)
-    const intervalHours = (currTime - prevTime) / (1000 * 60 * 60)
-    if (intervalHours > 0) {
-      intervals.push(Math.round(intervalHours))
+    
+    if (prevTime > 0 && currTime > 0 && currTime >= prevTime) {
+      const intervalHours = (currTime - prevTime) / (1000 * 60 * 60)
+      // Only include reasonable intervals (up to 365 days = 8760 hours as absolute max)
+      if (intervalHours > 0 && intervalHours < 8760) {
+        intervals.push(Math.round(intervalHours))
+      }
     }
   }
 
@@ -362,6 +369,8 @@ function calculateMedicalInsights(
   const avgInterval = intervals.length > 0 ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 0
   const sortedIntervals = [...intervals].sort((a, b) => a - b)
   const medianInterval = sortedIntervals.length > 0 ? sortedIntervals[Math.floor(sortedIntervals.length / 2)] : 0
+
+  console.log('[INTERVALS DEBUG]', { seizureCount: seizureRecords.length, intervalCount: intervals.length, min: minInterval, max: maxInterval, avg: Math.round(avgInterval) })
 
   // Duration Trend (over time)
   const durationTrend = sortedSeizures.map((s: any, idx: number) => ({

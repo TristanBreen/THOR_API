@@ -7,41 +7,51 @@ export default function handler(
   res: NextApiResponse<any>
 ) {
   try {
-    // Resolve Data directory
+    // Try to find the Data directory with various paths
     let dataDir = ''
     
-    const possiblePaths = [
-      // Production paths
+    // Common paths on Linux - try absolute paths first
+    const absolutePaths = [
       '/home/tristan/API/API_Repoed/THOR_API/Data',
-      '/data/Data',
-      // Development - from webpage root, go up to THOR_API
-      path.join(process.cwd(), '..', 'Data'),
-      path.join(process.cwd(), '../..', 'Data'),
-      path.join(__dirname, '../../Data'),
-      path.join(__dirname, '../../../Data'),
-      './Data',
+      '/home/tristan/Documents/Coding/Personal/THOR_API/THOR_API/Data',
     ]
-
-    console.log('Searching for Data directory. Current working directory:', process.cwd())
     
-    for (const p of possiblePaths) {
-      console.log('Checking path:', p, 'exists:', fs.existsSync(p))
+    // Try absolute paths first
+    for (const p of absolutePaths) {
       if (fs.existsSync(p)) {
         dataDir = p
-        console.log('Found data directory:', dataDir)
         break
+      }
+    }
+    
+    // If not found, try relative paths from current working directory
+    if (!dataDir) {
+      const cwd = process.cwd()
+      const relativePaths = [
+        path.join(cwd, '..', 'Data'),
+        path.join(cwd, '../..', 'Data'),
+        path.join(cwd, '../../Data'),
+        '/app/Data',
+        './Data',
+      ]
+      
+      for (const p of relativePaths) {
+        if (fs.existsSync(p)) {
+          dataDir = p
+          break
+        }
       }
     }
 
     if (!dataDir) {
-      console.error('Data directory not found. Tried paths:', possiblePaths)
+      console.error('Data directory not found. CWD:', process.cwd())
       return res.status(500).json({ error: 'Data directory not found' })
     }
 
     const seizureFile = path.join(dataDir, 'seizures.csv')
 
     if (!fs.existsSync(seizureFile)) {
-      console.error('Seizure file not found:', seizureFile)
+      console.error('Seizure file not found at:', seizureFile)
       return res.status(404).json({ error: 'Seizure data file not found' })
     }
 
