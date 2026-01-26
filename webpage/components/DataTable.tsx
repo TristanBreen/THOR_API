@@ -56,26 +56,26 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
 
   if (isLoading) {
     return (
-      <div className="card p-6 animate-pulse">
-        <div className="h-6 bg-cream-200 rounded w-1/3 mb-6"></div>
+      <div className="card p-6 animate-pulse bg-[#FCF9F2]">
+        <div className="h-6 bg-[#E5E1D8] rounded w-1/3 mb-6"></div>
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 bg-cream-100 rounded mb-2"></div>
+          <div key={i} className="h-12 bg-[#E5E1D8] rounded mb-2"></div>
         ))}
       </div>
     )
   }
 
   return (
-    <div className="card p-6 animate-slideUp overflow-x-auto">
-      <h2 className="text-xl font-bold text-sage-900 font-serif mb-6">Recent Seizure Records</h2>
+    <div className="card p-6 animate-slideUp overflow-x-auto bg-[#FCF9F2]">
+      <h2 className="text-xl font-bold text-[#3D3530] font-serif mb-6">Recent Seizure Records</h2>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1">
-          <label className="block text-sm font-semibold text-sage-700 mb-2">Period</label>
+          <label className="block text-sm font-semibold text-[#6B655F] mb-2">Period</label>
           <select
             value={filterPeriod}
             onChange={(e) => setFilterPeriod(e.target.value)}
-            className="w-full px-4 py-2 bg-cream-100 border border-cream-300 rounded-lg text-sage-900 focus:outline-none focus:ring-2 focus:ring-sage-500"
+            className="w-full px-4 py-2 bg-[#F0EBE3] border border-[#E5E1D8] rounded-lg text-[#3D3530] focus:outline-none focus:ring-2 focus:ring-[#8B7355]"
           >
             <option value="all">All</option>
             <option value="yes">During Period</option>
@@ -84,11 +84,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
         </div>
 
         <div className="flex-1">
-          <label className="block text-sm font-semibold text-sage-700 mb-2">Food</label>
+          <label className="block text-sm font-semibold text-[#6B655F] mb-2">Food</label>
           <select
             value={filterFood}
             onChange={(e) => setFilterFood(e.target.value)}
-            className="w-full px-4 py-2 bg-cream-100 border border-cream-300 rounded-lg text-sage-900 focus:outline-none focus:ring-2 focus:ring-sage-500"
+            className="w-full px-4 py-2 bg-[#F0EBE3] border border-[#E5E1D8] rounded-lg text-[#3D3530] focus:outline-none focus:ring-2 focus:ring-[#8B7355]"
           >
             <option value="all">All</option>
             <option value="yes">With Food</option>
@@ -100,11 +100,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-sage-900 text-cream-50 border-b-2 border-sage-800">
+            <tr className="bg-[#F0EBE3] text-[#3D3530] border-b-2 border-[#E5E1D8]">
               <th className="px-4 py-3 text-left font-semibold">
                 <button
                   onClick={() => toggleSort('timestamp')}
-                  className="flex items-center gap-2 hover:text-cream-200 transition-colors"
+                  className="flex items-center gap-2 hover:text-[#8B7355] transition-colors"
                 >
                   Date & Time
                   {sortField === 'timestamp' && (
@@ -115,7 +115,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
               <th className="px-4 py-3 text-left font-semibold">
                 <button
                   onClick={() => toggleSort('duration_seconds')}
-                  className="flex items-center gap-2 hover:text-cream-200 transition-colors"
+                  className="flex items-center gap-2 hover:text-gray-300 transition-colors"
                 >
                   Duration (s)
                   {sortField === 'duration_seconds' && (
@@ -132,25 +132,25 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
           <tbody>
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sage-600">
+                <td colSpan={6} className="px-4 py-8 text-center text-[#6B655F]">
                   No records found
                 </td>
               </tr>
             ) : (
               filteredData.slice(0, 50).map((record, idx) => (
-                <tr key={idx} className="border-b border-cream-200 hover:bg-cream-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-sage-900">
+                <tr key={idx} className="border-b border-[#E5E1D8] hover:bg-[#F0EBE3] transition-colors">
+                  <td className="px-4 py-3 font-medium text-[#3D3530]">
                     {format(parseISO(record.timestamp), 'MMM dd, yyyy HH:mm')}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-sage-800">{record.duration_seconds}</td>
-                  <td className="px-4 py-3">{record.hour_of_day}:00</td>
-                  <td className="px-4 py-3">{record.day_of_week}</td>
+                  <td className="px-4 py-3 font-semibold text-[#4D4540]">{record.duration_seconds}</td>
+                  <td className="px-4 py-3 text-[#6B655F]">{record.hour_of_day}:00</td>
+                  <td className="px-4 py-3 text-[#6B655F]">{record.day_of_week}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         record.period
-                          ? 'bg-rose-100 text-rose-700'
-                          : 'bg-gray-100 text-gray-700'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-[#F0EBE3] text-[#6B655F]'
                       }`}
                     >
                       {record.period ? 'Yes' : 'No'}
@@ -161,7 +161,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         record.food_eaten
                           ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
+                          : 'bg-[#F0EBE3] text-[#6B655F]'
                       }`}
                     >
                       {record.food_eaten ? 'Yes' : 'No'}
@@ -175,7 +175,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, isLoading }) => {
       </div>
 
       {filteredData.length > 50 && (
-        <p className="text-sm text-sage-600 mt-4 text-center">
+        <p className="text-sm text-[#6B655F] mt-4 text-center">
           Showing 50 of {filteredData.length} records
         </p>
       )}

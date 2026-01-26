@@ -100,6 +100,24 @@ interface DashboardData {
     pain_seizure_correlation: any[]
     food_impact_comparison: any[]
   }
+  pain_analytics: {
+    statistics: {
+      total_pain_entries: number
+      avg_pain: number
+      min_pain: number
+      max_pain: number
+      median_pain: number
+      std_dev: number
+    }
+    charts: {
+      pain_timeline: any[]
+      pain_by_hour: any[]
+      pain_by_day_of_week: any[]
+      pain_distribution: any[]
+      daily_average_pain: any[]
+      pain_severity_breakdown: any[]
+    }
+  }
   pnes_analysis: {
     pnes_likelihood_score: number
     classification: string
@@ -127,6 +145,203 @@ function parseCSV(content: string): any[] {
   }
 
   return rows
+}
+
+function calculatePainAnalytics(painRecords: any[]) {
+  if (!painRecords || painRecords.length === 0) {
+    return {
+      statistics: {
+        total_pain_entries: 0,
+        avg_pain: 0,
+        min_pain: 0,
+        max_pain: 0,
+        median_pain: 0,
+        std_dev: 0,
+      },
+      charts: {
+        pain_timeline: [],
+        pain_by_hour: [],
+        pain_by_day_of_week: [],
+        pain_distribution: [],
+        daily_average_pain: [],
+        pain_severity_breakdown: [],
+      },
+    }
+  }
+
+  // Extract pain values
+  const painValues = painRecords
+    .map((p: any) => parseFloat(p.Pain || p.pain || 0))
+    .filter((p: number) => p > 0 && p <= 10)
+
+  if (painValues.length === 0) {
+    return {
+      statistics: {
+        total_pain_entries: 0,
+        avg_pain: 0,
+        min_pain: 0,
+        max_pain: 0,
+        median_pain: 0,
+        std_dev: 0,
+      },
+      charts: {
+        pain_timeline: [],
+        pain_by_hour: [],
+        pain_by_day_of_week: [],
+        pain_distribution: [],
+        daily_average_pain: [],
+        pain_severity_breakdown: [],
+      },
+    }
+  }
+
+  // Calculate statistics
+  const avgPain = painValues.reduce((a, b) => a + b, 0) / painValues.length
+  const minPain = Math.min(...painValues)
+  const maxPain = Math.max(...painValues)
+  const sortedPain = [...painValues].sort((a, b) => a - b)
+  const medianPain = sortedPain[Math.floor(sortedPain.length / 2)]
+  const variance = painValues.reduce((sum, val) => sum + Math.pow(val - avgPain, 2), 0) / painValues.length
+  const stdDev = Math.sqrt(variance)
+
+  // Pain timeline (all data points with date/time)
+  const painTimeline = painRecords
+    .filter((p: any) => p.Date && p.Pain)
+    .map((p: any) => ({
+      date: p.Date,
+      time: p.Time || '12:00',
+      pain: parseFloat(p.Pain),
+      timestamp: `${p.Date}T${p.Time || '12:00:00'}`,
+    }))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+
+  // Pain by hour of day
+  const painByHourMap = new Map<number, number[]>()
+  for (let i = 0; i < 24; i++) {
+    painByHourMap.set(i, [])
+  }
+
+  painRecords.forEach((p: any) => {
+    if (p.Time) {
+      const hour = parseInt(p.Time.split(':')[0]) || 0
+      const pain = parseFloat(p.Pain || 0)
+      if (pain > 0) {
+        const hourData = painByHourMap.get(hour) || []
+        hourData.push(pain)
+        painByHourMap.set(hour, hourData)
+      }
+    }
+  })
+
+  const painByHour = Array.from(painByHourMap.entries())
+    .map(([hour, pains]) => ({
+      hour: `${hour.toString().padStart(2, '0')}:00`,
+      avg_pain: pains.length > 0 ? (pains.reduce((a, b) => a + b, 0) / pains.length).toFixed(1) : 0,
+      count: pains.length,
+    }))
+    .sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
+
+  // Pain by day of week
+  const painByDayMap = new Map<string, number[]>()
+  const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  dayOrder.forEach(day => painByDayMap.set(day, []))
+
+  painRecords.forEach((p: any) => {
+    if (p.Date) {
+      const [year, month, day] = p.Date.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
+      const pain = parseFloat(p.Pain || 0)
+      if (pain > 0) {
+        const dayData = painByDayMap.get(dayName) || []
+        dayData.push(pain)
+        painByDayMap.set(dayName, dayData)
+      }
+    }
+  })
+
+  const painByDayOfWeek = dayOrder.map(day => {
+    const pains = painByDayMap.get(day) || []
+    return {
+      day,
+      avg_pain: pains.length > 0 ? (pains.reduce((a, b) => a + b, 0) / pains.length).toFixed(1) : 0,
+      count: pains.length,
+    }
+  })
+
+  // Pain distribution (histogram: count by pain level)
+  const distributionMap = new Map<number, number>()
+  for (let i = 1; i <= 10; i++) {
+    distributionMap.set(i, 0)
+  }
+
+  painValues.forEach(pain => {
+    const level = Math.round(pain)
+    distributionMap.set(level, (distributionMap.get(level) || 0) + 1)
+  })
+
+  const painDistribution = Array.from(distributionMap.entries())
+    .map(([level, count]) => ({
+      pain_level: level,
+      count,
+      percentage: ((count / painValues.length) * 100).toFixed(1),
+    }))
+
+  // Daily average pain
+  const dailyPainMap = new Map<string, number[]>()
+
+  painRecords.forEach((p: any) => {
+    if (p.Date && p.Pain) {
+      const pain = parseFloat(p.Pain)
+      if (pain > 0) {
+        const dayData = dailyPainMap.get(p.Date) || []
+        dayData.push(pain)
+        dailyPainMap.set(p.Date, dayData)
+      }
+    }
+  })
+
+  const dailyAveragePain = Array.from(dailyPainMap.entries())
+    .map(([date, pains]) => ({
+      date,
+      avg_pain: (pains.reduce((a, b) => a + b, 0) / pains.length).toFixed(1),
+      min_pain: Math.min(...pains),
+      max_pain: Math.max(...pains),
+      count: pains.length,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  // Pain severity breakdown (count by category)
+  const mildPain = painValues.filter(p => p <= 3).length
+  const moderatePain = painValues.filter(p => p > 3 && p <= 6).length
+  const severePain = painValues.filter(p => p > 6 && p <= 8).length
+  const veryServerePain = painValues.filter(p => p > 8).length
+
+  const painSeverityBreakdown = [
+    { severity: 'Mild (1-3)', count: mildPain, percentage: ((mildPain / painValues.length) * 100).toFixed(1) },
+    { severity: 'Moderate (4-6)', count: moderatePain, percentage: ((moderatePain / painValues.length) * 100).toFixed(1) },
+    { severity: 'Severe (7-8)', count: severePain, percentage: ((severePain / painValues.length) * 100).toFixed(1) },
+    { severity: 'Very Severe (9-10)', count: veryServerePain, percentage: ((veryServerePain / painValues.length) * 100).toFixed(1) },
+  ]
+
+  return {
+    statistics: {
+      total_pain_entries: painValues.length,
+      avg_pain: parseFloat(avgPain.toFixed(1)),
+      min_pain: minPain,
+      max_pain: maxPain,
+      median_pain: medianPain,
+      std_dev: parseFloat(stdDev.toFixed(2)),
+    },
+    charts: {
+      pain_timeline: painTimeline,
+      pain_by_hour: painByHour,
+      pain_by_day_of_week: painByDayOfWeek,
+      pain_distribution: painDistribution,
+      daily_average_pain: dailyAveragePain,
+      pain_severity_breakdown: painSeverityBreakdown,
+    },
+  }
 }
 
 function analyzePNESIndicators(
@@ -409,8 +624,8 @@ function calculateMedicalInsights(
       .reduce((max: number, p: any) => Math.max(max, parseFloat(p.Pain) || 0), 0)
     return {
       date: sDate,
-      duration: s.duration_seconds || 0,
-      pain: painOnDay || 0,
+      seizure_count: 1,
+      avg_pain: painOnDay || 0,
     }
   })
 
@@ -418,14 +633,54 @@ function calculateMedicalInsights(
   const foodImpactComparison = [
     {
       category: 'With Food',
-      avg_duration: Math.round(withFoodAvg),
-      count: withFood.length,
+      avg_duration: Math.round(withFoodAvg * 10) / 10,
+      seizure_count: withFood.length,
     },
     {
       category: 'Without Food',
-      avg_duration: Math.round(withoutFoodAvg),
-      count: withoutFood.length,
+      avg_duration: Math.round(withoutFoodAvg * 10) / 10,
+      seizure_count: withoutFood.length,
     },
+  ]
+
+  // Seizure Severity Distribution (by duration)
+  const seizureSeverity = seizureRecords.reduce(
+    (acc: any, s: any) => {
+      const dur = s.duration_seconds || 0
+      if (dur < 30) acc.mild++
+      else if (dur < 60) acc.moderate++
+      else if (dur < 120) acc.severe++
+      else acc.very_severe++
+      return acc
+    },
+    { mild: 0, moderate: 0, severe: 0, very_severe: 0 }
+  )
+
+  const seizureSeverityData = [
+    { severity: 'Mild (<30s)', count: seizureSeverity.mild, percentage: ((seizureSeverity.mild / seizureRecords.length) * 100).toFixed(1) },
+    { severity: 'Moderate (30-60s)', count: seizureSeverity.moderate, percentage: ((seizureSeverity.moderate / seizureRecords.length) * 100).toFixed(1) },
+    { severity: 'Severe (1-2m)', count: seizureSeverity.severe, percentage: ((seizureSeverity.severe / seizureRecords.length) * 100).toFixed(1) },
+    { severity: 'Very Severe (>2m)', count: seizureSeverity.very_severe, percentage: ((seizureSeverity.very_severe / seizureRecords.length) * 100).toFixed(1) },
+  ]
+
+  // Time-based pattern analysis
+  const timeOfDayPattern = seizureRecords.reduce(
+    (acc: any, s: any) => {
+      const hour = s.hour_of_day || 0
+      if (hour >= 0 && hour < 6) acc.night++
+      else if (hour >= 6 && hour < 12) acc.morning++
+      else if (hour >= 12 && hour < 18) acc.afternoon++
+      else acc.evening++
+      return acc
+    },
+    { night: 0, morning: 0, afternoon: 0, evening: 0 }
+  )
+
+  const timeOfDayData = [
+    { period: 'Night (12AM-6AM)', count: timeOfDayPattern.night, percentage: ((timeOfDayPattern.night / seizureRecords.length) * 100).toFixed(1) },
+    { period: 'Morning (6AM-12PM)', count: timeOfDayPattern.morning, percentage: ((timeOfDayPattern.morning / seizureRecords.length) * 100).toFixed(1) },
+    { period: 'Afternoon (12PM-6PM)', count: timeOfDayPattern.afternoon, percentage: ((timeOfDayPattern.afternoon / seizureRecords.length) * 100).toFixed(1) },
+    { period: 'Evening (6PM-12AM)', count: timeOfDayPattern.evening, percentage: ((timeOfDayPattern.evening / seizureRecords.length) * 100).toFixed(1) },
   ]
 
   return {
@@ -464,6 +719,8 @@ function calculateMedicalInsights(
       inter_seizure_distribution: interSeizureDistribution,
       pain_seizure_correlation: painSeizureCorrelation,
       food_impact_comparison: foodImpactComparison,
+      seizure_severity_distribution: seizureSeverityData,
+      time_of_day_pattern: timeOfDayData,
     },
   }
 }
@@ -807,6 +1064,7 @@ export default function handler(
         sleep_timeline: sleepTimeline,
       },
       pnes_analysis: analyzePNESIndicators(seizureRecords, painRecords, appleWatchData),
+      pain_analytics: calculatePainAnalytics(painRecords),
       ...calculateMedicalInsights(seizureRecords, painRecords),
       timeline: seizureRecords,
       records: seizureRecords,

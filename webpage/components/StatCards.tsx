@@ -26,10 +26,10 @@ const StatCards: React.FC<StatCardsProps> = ({ stats, isLoading }) => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="card p-6 animate-pulse">
-            <div className="h-4 bg-cream-200 rounded w-1/3 mb-4"></div>
-            <div className="h-8 bg-cream-200 rounded w-1/2 mb-2"></div>
-            <div className="h-3 bg-cream-200 rounded w-2/3"></div>
+          <div key={i} className="card p-6 animate-pulse bg-[#FCF9F2]">
+            <div className="h-4 bg-[#E5E1D8] rounded w-1/3 mb-4"></div>
+            <div className="h-8 bg-[#E5E1D8] rounded w-1/2 mb-2"></div>
+            <div className="h-3 bg-[#E5E1D8] rounded w-2/3"></div>
           </div>
         ))}
       </div>
@@ -91,8 +91,8 @@ const StatCards: React.FC<StatCardsProps> = ({ stats, isLoading }) => {
       {cards.map((card, index) => {
         const Icon = card.icon
         const bgColor = card.alert
-          ? 'from-rose-50 to-rose-100/50'
-          : 'from-cream-50 to-cream-100/50'
+          ? 'from-[#F5EFE7] to-[#F0EBE3]'
+          : 'from-[#F0EBE3] to-[#E5E1D8]'
 
         return (
           <div
@@ -101,24 +101,24 @@ const StatCards: React.FC<StatCardsProps> = ({ stats, isLoading }) => {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-sage-600 group-hover:text-sage-700 transition-colors">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#6B655F] group-hover:text-[#3D3530] transition-colors">
                   {card.label}
                 </p>
               </div>
-              <Icon className={`w-5 h-5 ${card.alert ? 'text-rose-600' : 'text-sage-600'}`} />
+              <Icon className={`w-5 h-5 ${card.alert ? 'text-[#C84E3C]' : 'text-[#8B7355]'}`} />
             </div>
 
             <div className="mb-2">
               <p
                 className={`text-3xl font-bold ${
-                  card.alert ? 'text-rose-600' : 'text-sage-800'
+                  card.alert ? 'text-[#C84E3C]' : 'text-[#3D3530]'
                 }`}
               >
                 {card.value}
               </p>
             </div>
 
-            <p className="text-sm text-sage-600">{card.subtitle}</p>
+            <p className="text-sm text-[#6B655F]">{card.subtitle}</p>
           </div>
         )
       })}

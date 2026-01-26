@@ -3,12 +3,11 @@ import Head from 'next/head'
 import StatCards from '@/components/StatCards'
 import Predictions from '@/components/Predictions'
 import Insights from '@/components/Insights'
-import Charts from '@/components/Charts'
+import GraphTabs from '@/components/GraphTabs'
 import DataTable from '@/components/DataTable'
 import Header from '@/components/Header'
 import ErrorAlert from '@/components/ErrorAlert'
 import Footer from '@/components/Footer'
-import MedicalInsights from '@/components/MedicalInsights'
 
 interface DashboardData {
   last_updated: string
@@ -19,6 +18,7 @@ interface DashboardData {
   health_charts: any
   medical_insights: any
   medical_charts: any
+  pain_analytics: any
   pnes_analysis: any
   insights: any
   timeline: any
@@ -121,18 +121,17 @@ export default function Dashboard() {
             </section>
           )}
 
-          {/* Medical Insights Section */}
+          {/* Analysis & Visualizations (All in Tabs) */}
           {data && (
             <section className="mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Advanced Medical Insights</h2>
-              <MedicalInsights medicalInsights={data.medical_insights} medicalCharts={data.medical_charts} isLoading={isLoading} />
-            </section>
-          )}
-
-          {/* Charts Section */}
-          {data && (
-            <section className="mb-12">
-              <Charts data={data.charts} isLoading={isLoading} />
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">Analysis & Visualizations</h2>
+              <GraphTabs 
+                charts={data.charts} 
+                pain_analytics={data.pain_analytics}
+                medical_insights={data.medical_insights}
+                medical_charts={data.medical_charts}
+                isLoading={isLoading} 
+              />
             </section>
           )}
 
