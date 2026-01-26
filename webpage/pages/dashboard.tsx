@@ -88,7 +88,7 @@ export default function Dashboard() {
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
       </Head>
 
-      <main className="min-h-screen bg-gray-950">
+      <main className="min-h-screen bg-gradient-to-br from-sage-50 via-cream-50 to-cream-100">
         {/* Header */}
         <Header
           isLoading={isLoading}
@@ -124,7 +124,7 @@ export default function Dashboard() {
           {/* Analysis & Visualizations (All in Tabs) */}
           {data && (
             <section className="mb-12">
-              <h2 className="text-3xl font-bold text-white mb-6">Analysis & Visualizations</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">Analysis & Visualizations</h2>
               <GraphTabs 
                 charts={data.charts} 
                 pain_analytics={data.pain_analytics}
