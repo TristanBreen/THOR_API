@@ -473,32 +473,23 @@ export default function handler(
   res: NextApiResponse<DashboardData | { error: string }>
 ) {
   try {
-    // Resolve Data directory - check multiple paths
-    let dataDir = ''
+    // Resolve Data directory - check server absolute path first, then Docker mount, then local Data folder
+    // This matches the logic in app.py
+    const SERVER_BASE_PATH = '/home/tristan/API/API_Repoed/THOR_API'
+    const SCRIPT_DIR = process.cwd() // project root (webpage/)
+    const PARENT_DIR = path.dirname(SCRIPT_DIR) // one level up
     
-    const possiblePaths = [
-      // Server production paths (Docker and direct)
-      '/home/tristan/API/API_Repoed/THOR_API/Data',
-      '/data/Data',
-      // Relative to process cwd (development and some deployment scenarios)
-      path.join(process.cwd(), 'Data'),
-      path.join(process.cwd(), '..', 'Data'),
-      path.join(process.cwd(), '../..', 'Data'),
-      // Fallback
-      './Data',
-    ]
+    let dataDir = ''
 
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        dataDir = p
-        console.log('Using data directory:', dataDir)
-        break
-      }
-    }
-
-    if (!dataDir) {
-      console.error('Could not find Data directory in any of these paths:', possiblePaths)
-      throw new Error(`Data directory not found. Tried: ${possiblePaths.join(', ')}`)
+    // Check paths in priority order (same as app.py)
+    if (fs.existsSync(path.join(SERVER_BASE_PATH, 'Data'))) {
+      dataDir = path.join(SERVER_BASE_PATH, 'Data')
+    } else if (fs.existsSync('/data/Data')) {
+      dataDir = '/data/Data'
+    } else if (fs.existsSync(path.join(PARENT_DIR, 'Data'))) {
+      dataDir = path.join(PARENT_DIR, 'Data')
+    } else {
+      dataDir = path.join(PARENT_DIR, 'Data')
     }
 
     console.log('Using data directory:', dataDir)
