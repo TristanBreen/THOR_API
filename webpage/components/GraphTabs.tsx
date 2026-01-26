@@ -464,8 +464,8 @@ export default function GraphTabs({ charts, pain_analytics, medical_insights, me
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 px-6 py-4 font-semibold text-center transition-colors ${
               activeTab === tab.id
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                ? 'text-white border-b-2 border-[#8B7355] bg-[#8B7355]'
+                : 'text-[#6B655F] hover:text-[#3D3530] hover:bg-[#F0EBE3]'
             }`}
           >
             {tab.label}
@@ -484,17 +484,17 @@ export default function GraphTabs({ charts, pain_analytics, medical_insights, me
                 <>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {tab.charts.map((config: any) => (
-                      <div key={config.id} className="bg-gray-50 rounded-lg p-6 border-t-4 border-blue-400">
+                      <div key={config.id} className="bg-[#FCF9F2] rounded-lg p-6 border-t-4 border-[#8B7355]">
                         <div className="mb-4">
-                          <h3 className="text-lg font-bold text-gray-800">{config.title}</h3>
-                          {config.description && <p className="text-sm text-gray-600">{config.description}</p>}
+                          <h3 className="text-lg font-bold text-[#3D3530]">{config.title}</h3>
+                          {config.description && <p className="text-sm text-[#6B655F]">{config.description}</p>}
                         </div>
                         {config.render()}
                       </div>
                     ))}
                   </div>
                   {tab.charts.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-[#6B655F]">
                       <p>No data available for this tab.</p>
                     </div>
                   )}
@@ -510,7 +510,7 @@ export default function GraphTabs({ charts, pain_analytics, medical_insights, me
 
 // Medical Insights Tab Component
 function MedicalInsightsTab({ medicalInsights, medicalCharts }: { medicalInsights: any; medicalCharts: any }) {
-  if (!medicalInsights) return <div className="text-center py-12 text-gray-500">No medical insights available.</div>
+  if (!medicalInsights) return <div className="text-center py-12 text-[#6B655F]">No medical insights available.</div>
 
   const { food_impact, menstrual_analysis, pain_correlation, inter_seizure_intervals } = medicalInsights
 
@@ -519,31 +519,31 @@ function MedicalInsightsTab({ medicalInsights, medicalCharts }: { medicalInsight
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Food Impact Card */}
-        <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600 font-semibold">Food Impact</p>
-          <p className="text-2xl font-bold text-green-600 mt-2">{food_impact?.trend || 'N/A'}</p>
-          <p className="text-xs text-gray-600 mt-1">Seizures are {food_impact?.trend === 'longer' ? 'longer' : food_impact?.trend === 'shorter' ? 'shorter' : 'similar'} with food</p>
+        <div className="bg-gradient-to-br from-[#F0EBE3] to-[#E5E1D8] rounded-lg shadow p-6">
+          <p className="text-sm text-[#6B655F] font-semibold">Food Impact</p>
+          <p className="text-2xl font-bold text-[#8B7355] mt-2">{food_impact?.trend || 'N/A'}</p>
+          <p className="text-xs text-[#6B655F] mt-1">Seizures are {food_impact?.trend === 'longer' ? 'longer' : food_impact?.trend === 'shorter' ? 'shorter' : 'similar'} with food</p>
         </div>
 
         {/* Menstrual Analysis Card */}
-        <div className="bg-gradient-to-br from-pink-50 to-rose-100 rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600 font-semibold">Menstrual Cycle</p>
-          <p className="text-2xl font-bold text-pink-600 mt-2">{menstrual_analysis?.period_percentage?.toFixed(1)}%</p>
-          <p className="text-xs text-gray-600 mt-1">Seizures during period</p>
+        <div className="bg-gradient-to-br from-[#F0EBE3] to-[#E5E1D8] rounded-lg shadow p-6">
+          <p className="text-sm text-[#6B655F] font-semibold">Menstrual Cycle</p>
+          <p className="text-2xl font-bold text-[#8B7355] mt-2">{menstrual_analysis?.period_percentage?.toFixed(1)}%</p>
+          <p className="text-xs text-[#6B655F] mt-1">Seizures during period</p>
         </div>
 
         {/* Pain Correlation Card */}
-        <div className="bg-gradient-to-br from-orange-50 to-amber-100 rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600 font-semibold">Pain Correlation</p>
-          <p className="text-2xl font-bold text-orange-600 mt-2">{pain_correlation?.correlation_percentage?.toFixed(1)}%</p>
-          <p className="text-xs text-gray-600 mt-1">Days with pain and seizures</p>
+        <div className="bg-gradient-to-br from-[#F0EBE3] to-[#E5E1D8] rounded-lg shadow p-6">
+          <p className="text-sm text-[#6B655F] font-semibold">Pain Correlation</p>
+          <p className="text-2xl font-bold text-[#8B7355] mt-2">{pain_correlation?.correlation_percentage?.toFixed(1)}%</p>
+          <p className="text-xs text-[#6B655F] mt-1">Days with pain and seizures</p>
         </div>
 
         {/* Inter-Seizure Intervals Card */}
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-100 rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600 font-semibold">Max Interval</p>
-          <p className="text-2xl font-bold text-blue-600 mt-2">{inter_seizure_intervals?.max_interval || 0}h</p>
-          <p className="text-xs text-gray-600 mt-1">Longest time between seizures</p>
+        <div className="bg-gradient-to-br from-[#F0EBE3] to-[#E5E1D8] rounded-lg shadow p-6">
+          <p className="text-sm text-[#6B655F] font-semibold">Max Interval</p>
+          <p className="text-2xl font-bold text-[#8B7355] mt-2">{inter_seizure_intervals?.max_interval || 0}h</p>
+          <p className="text-xs text-[#6B655F] mt-1">Longest time between seizures</p>
         </div>
       </div>
 
@@ -617,25 +617,25 @@ function MedicalInsightsTab({ medicalInsights, medicalCharts }: { medicalInsight
         </div>
 
         {/* Inter-Seizure Intervals */}
-        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Inter-Seizure Intervals</h3>
+        <div className="bg-[#FCF9F2] rounded-lg shadow p-6 border-l-4 border-[#8B7355]">
+          <h3 className="text-lg font-bold text-[#3D3530] mb-4">Inter-Seizure Intervals</h3>
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-gray-600">Shortest Interval</p>
-              <p className="text-xl font-bold text-gray-800">{inter_seizure_intervals?.min_interval || 0}h</p>
+              <p className="text-sm text-[#6B655F]">Shortest Interval</p>
+              <p className="text-xl font-bold text-[#3D3530]">{inter_seizure_intervals?.min_interval || 0}h</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Longest Interval</p>
-              <p className="text-xl font-bold text-gray-800">{inter_seizure_intervals?.max_interval || 0}h</p>
+              <p className="text-sm text-[#6B655F]">Longest Interval</p>
+              <p className="text-xl font-bold text-[#3D3530]">{inter_seizure_intervals?.max_interval || 0}h</p>
             </div>
-            <div className="pt-3 border-t space-y-2">
+            <div className="pt-3 border-t border-[#E5E1D8] space-y-2">
               <div>
-                <p className="text-sm text-gray-600">Average</p>
-                <p className="text-lg font-bold text-gray-800">{inter_seizure_intervals?.avg_interval?.toFixed(1)}h</p>
+                <p className="text-sm text-[#6B655F]">Average</p>
+                <p className="text-lg font-bold text-[#3D3530]">{inter_seizure_intervals?.avg_interval?.toFixed(1)}h</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Median</p>
-                <p className="text-lg font-bold text-gray-800">{inter_seizure_intervals?.median_interval}h</p>
+                <p className="text-sm text-[#6B655F]">Median</p>
+                <p className="text-lg font-bold text-[#3D3530]">{inter_seizure_intervals?.median_interval}h</p>
               </div>
             </div>
           </div>
@@ -646,8 +646,8 @@ function MedicalInsightsTab({ medicalInsights, medicalCharts }: { medicalInsight
       {medicalCharts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {medicalCharts.food_impact_comparison && (
-            <div className="bg-gray-50 rounded-lg p-6 border-t-4 border-green-400">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Food Impact Comparison</h3>
+            <div className="bg-[#FCF9F2] rounded-lg p-6 border-t-4 border-[#8B7355]">
+              <h3 className="text-lg font-bold text-[#3D3530] mb-4">Food Impact Comparison</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={medicalCharts.food_impact_comparison}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
@@ -661,8 +661,8 @@ function MedicalInsightsTab({ medicalInsights, medicalCharts }: { medicalInsight
           )}
 
           {medicalCharts.inter_seizure_distribution && (
-            <div className="bg-gray-50 rounded-lg p-6 border-t-4 border-blue-400">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Inter-Seizure Intervals</h3>
+            <div className="bg-[#FCF9F2] rounded-lg p-6 border-t-4 border-[#8B7355]">
+              <h3 className="text-lg font-bold text-[#3D3530] mb-4">Inter-Seizure Intervals</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={medicalCharts.inter_seizure_distribution}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />

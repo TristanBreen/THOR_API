@@ -8,40 +8,41 @@
   }
 
   body {
-    background-color: #1F2020;
-    @apply text-gray-100;
+    background-color: #F5EFE7;
+    color: #3D3530;
   }
 }
 
 @layer components {
   .card {
-    background-color: rgba(60, 60, 60, 0.5);
+    background-color: #FCF9F2;
     @apply backdrop-blur-md rounded-lg shadow-soft hover:shadow-hover transition-all duration-300;
   }
 
   .card-dark {
-    background-color: rgba(60, 60, 60, 0.5);
-    @apply backdrop-blur-md rounded-lg shadow-soft text-gray-100;
+    background-color: #FCF9F2;
+    @apply backdrop-blur-md rounded-lg shadow-soft;
+    color: #3D3530;
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 hover:shadow-hover active:scale-95;
+    @apply px-6 py-3 bg-[#8B7355] text-[#FCF9F2] rounded-lg font-semibold hover:bg-[#6B5344] transition-all duration-300 hover:shadow-hover active:scale-95;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-gray-700 text-gray-100 rounded-lg font-semibold hover:bg-gray-600 transition-all duration-300 hover:shadow-soft;
+    @apply px-6 py-3 bg-[#F0EBE3] text-[#3D3530] rounded-lg font-semibold hover:bg-[#E5E1D8] transition-all duration-300 hover:shadow-soft;
   }
 
   .stat-card {
-    @apply card p-6 border-l-4 border-blue-500 hover:scale-105 transition-transform duration-300;
+    @apply card p-6 border-l-4 border-[#8B7355] hover:scale-105 transition-transform duration-300;
   }
 
   .insight-item {
-    @apply flex items-start gap-4 py-4 border-b border-gray-700 last:border-b-0;
+    @apply flex items-start gap-4 py-4 border-b border-[#E5E1D8] last:border-b-0;
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-[#8B7355] to-[#A88568] bg-clip-text text-transparent;
   }
 }
 
@@ -51,14 +52,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #1F2020;
+  background: #F5EFE7;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3C3C3C;
+  background: #D4CFC7;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #505050;
+  background: #BFB9B1;
 }

@@ -58,7 +58,7 @@ export default function PainAnalytics({ pain_analytics }: PainAnalyticsProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-4">
           <p className="text-sm text-gray-600 font-semibold">Total Entries</p>
-          <p className="text-2xl font-bold text-blue-600">{statistics.total_pain_entries}</p>
+          <p className="text-2xl font-bold text-[#8B7355]">{statistics.total_pain_entries}</p>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow p-4">
           <p className="text-sm text-gray-600 font-semibold">Average Pain</p>
