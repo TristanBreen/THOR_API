@@ -1,5 +1,4 @@
 FROM node:24-alpine
-
 WORKDIR /app
 
 # Copy package files
@@ -14,8 +13,8 @@ COPY . .
 # Build Next.js application
 RUN npm run build
 
-# Expose port
-EXPOSE 5000
+# Expose port 3000 (Next.js default)
+EXPOSE 3000
 
 # Set production environment
 ENV NODE_ENV=production
