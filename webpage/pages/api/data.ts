@@ -532,7 +532,11 @@ export default function handler(
 
     // Get date range
     const seizureDates = seizures
-      .map((s) => new Date(s.Date))
+      .map((s) => {
+        // Parse date as local date (not UTC) to avoid timezone offset issues
+        const [year, month, day] = s.Date.split('-').map(Number)
+        return new Date(year, month - 1, day)
+      })
       .filter((d) => !isNaN(d.getTime()))
     const firstRecord = seizureDates.length > 0 
       ? seizureDates.reduce((a, b) => a < b ? a : b).toLocaleDateString()
@@ -548,7 +552,9 @@ export default function handler(
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     const recentSeizures7Days = seizures.filter((s) => {
-      const d = new Date(s.Date)
+      // Parse date as local date (not UTC) to avoid timezone offset issues
+      const [year, month, day] = s.Date.split('-').map(Number)
+      const d = new Date(year, month - 1, day)
       return d >= sevenDaysAgo && !isNaN(d.getTime())
     }).length
     const avgPerWeek = recentSeizures7Days
@@ -696,7 +702,9 @@ export default function handler(
     
     seizures.forEach((s) => {
       if (s.Date) {
-        const date = new Date(s.Date)
+        // Parse date as local date (not UTC) to avoid timezone offset issues
+        const [year, month, day] = s.Date.split('-').map(Number)
+        const date = new Date(year, month - 1, day)
         const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
         dayOfWeekMap.set(dayName, (dayOfWeekMap.get(dayName) || 0) + 1)
       }
@@ -713,11 +721,14 @@ export default function handler(
       const time = s.Time || '00:00:00'
       // Create valid ISO string
       const timestamp = `${date}T${time}.000Z`
+      // Parse date as local date (not UTC) to avoid timezone offset issues
+      const [year, month, day] = date.split('-').map(Number)
+      const dateObj = new Date(year, month - 1, day)
       return {
         timestamp,
         duration_seconds: parseInt(s.Duration) || 0,
         hour_of_day: parseInt(time.split(':')[0]) || 0,
-        day_of_week: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
+        day_of_week: dateObj.toLocaleDateString('en-US', { weekday: 'long' }),
         period: s['Peiod'] === 'True' || s['Peiod'] === true,
         food_eaten: s['Eaten'] === 'True' || s['Eaten'] === true,
       }
