@@ -37,12 +37,12 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="card p-6 animate-pulse">
-            <div className="h-6 bg-cream-200 rounded w-1/2 mb-6"></div>
+          <div key={i} className="card p-6 animate-pulse bg-gray-800">
+            <div className="h-6 bg-gray-700 rounded w-1/2 mb-6"></div>
             {[...Array(3)].map((_, j) => (
               <div key={j} className="mb-4">
-                <div className="h-4 bg-cream-200 rounded w-full mb-2"></div>
-                <div className="h-3 bg-cream-200 rounded w-2/3"></div>
+                <div className="h-4 bg-gray-700 rounded w-full mb-2"></div>
+                <div className="h-3 bg-gray-700 rounded w-2/3"></div>
               </div>
             ))}
           </div>
@@ -54,21 +54,21 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-slideUp">
       {/* Seizure Insights */}
-      <div className="card p-6 border-t-4 border-sage-600">
+      <div className="card p-6 border-t-4 border-blue-500 bg-gray-800">
         <div className="flex items-center gap-2 mb-6">
-          <Lightbulb className="w-5 h-5 text-sage-600" />
-          <h3 className="text-lg font-bold text-sage-900 font-serif">Seizure Patterns</h3>
+          <Lightbulb className="w-5 h-5 text-blue-400" />
+          <h3 className="text-lg font-bold text-white font-serif">Seizure Patterns</h3>
         </div>
 
         <div className="space-y-4">
           {insights && insights['period_related_count'] && (
             <div className="insight-item">
-              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-red-900 flex items-center justify-center flex-shrink-0">
                 <span className="text-lg">🩸</span>
               </div>
               <div>
-                <h4 className="font-semibold text-sage-900">Menstrual Cycle</h4>
-                <p className="text-sm text-sage-700">
+                <h4 className="font-semibold text-white">Menstrual Cycle</h4>
+                <p className="text-sm text-gray-400">
                   {((insights['period_related_count'] as number / (insights['total_seizures'] as number)) * 100).toFixed(1)}% of seizures occurred during menstrual cycle
                 </p>
               </div>
@@ -77,12 +77,12 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
 
           {insights && insights['food_eaten_count'] && (
             <div className="insight-item">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Coffee className="w-5 h-5 text-amber-600" />
+              <div className="w-10 h-10 rounded-full bg-amber-900 flex items-center justify-center flex-shrink-0">
+                <Coffee className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <h4 className="font-semibold text-sage-900">Food Intake</h4>
-                <p className="text-sm text-sage-700">
+                <h4 className="font-semibold text-white">Food Intake</h4>
+                <p className="text-sm text-gray-400">
                   {((insights['food_eaten_count'] as number / (insights['total_seizures'] as number)) * 100).toFixed(1)}% of seizures occurred after eating
                 </p>
               </div>
@@ -91,12 +91,12 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
 
           {insights && insights['duration_stats'] && (
             <div className="insight-item">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center flex-shrink-0">
                 <span className="text-lg">⏱️</span>
               </div>
               <div>
-                <h4 className="font-semibold text-sage-900">Duration Patterns</h4>
-                <p className="text-sm text-sage-700">
+                <h4 className="font-semibold text-white">Duration Patterns</h4>
+                <p className="text-sm text-gray-400">
                   Average: {insights['duration_mean']}s | Range: {insights['duration_min']}s - {insights['duration_max']}s
                 </p>
               </div>
@@ -106,21 +106,21 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
       </div>
 
       {/* Health Insights */}
-      <div className="card p-6 border-t-4 border-sage-600">
+      <div className="card p-6 border-t-4 border-green-500 bg-gray-800">
         <div className="flex items-center gap-2 mb-6">
-          <Heart className="w-5 h-5 text-sage-600" />
-          <h3 className="text-lg font-bold text-sage-900 font-serif">Health & Wellness</h3>
+          <Heart className="w-5 h-5 text-green-400" />
+          <h3 className="text-lg font-bold text-white font-serif">Health & Wellness</h3>
         </div>
 
         <div className="space-y-4">
           {healthInsights?.sleep_analysis?.before_seizure_avg_total && (
             <div className="insight-item">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <Moon className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 rounded-full bg-indigo-900 flex items-center justify-center flex-shrink-0">
+                <Moon className="w-5 h-5 text-indigo-400" />
               </div>
               <div>
-                <h4 className="font-semibold text-sage-900">Sleep Quality</h4>
-                <p className="text-sm text-sage-700">
+                <h4 className="font-semibold text-white">Sleep Quality</h4>
+                <p className="text-sm text-gray-400">
                   Sleep 1-3 days before seizures: {healthInsights.sleep_analysis.before_seizure_avg_total.toFixed(1)}h vs baseline{' '}
                   {healthInsights.sleep_analysis.baseline_avg_total?.toFixed(1) || 'N/A'}h
                 </p>
@@ -130,12 +130,12 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
 
           {healthInsights?.heart_rate_analysis?.seizure_day_min_hr && (
             <div className="insight-item">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <Heart className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 rounded-full bg-red-900 flex items-center justify-center flex-shrink-0">
+                <Heart className="w-5 h-5 text-red-400" />
               </div>
               <div>
-                <h4 className="font-semibold text-sage-900">Heart Rate</h4>
-                <p className="text-sm text-sage-700">
+                <h4 className="font-semibold text-white">Heart Rate</h4>
+                <p className="text-sm text-gray-400">
                   Resting HR on seizure days: {healthInsights.heart_rate_analysis.seizure_day_min_hr.toFixed(0)} bpm vs baseline{' '}
                   {healthInsights.heart_rate_analysis.baseline_min_hr?.toFixed(0) || 'N/A'} bpm
                 </p>
@@ -145,12 +145,12 @@ const Insights: React.FC<InsightsProps> = ({ insights, healthInsights, isLoading
 
           {healthInsights?.activity_analysis?.before_seizure_avg_distance && (
             <div className="insight-item">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                <Footprints className="w-5 h-5 text-green-600" />
+              <div className="w-10 h-10 rounded-full bg-green-900 flex items-center justify-center flex-shrink-0">
+                <Footprints className="w-5 h-5 text-green-400" />
               </div>
               <div>
-                <h4 className="font-semibold text-sage-900">Activity Level</h4>
-                <p className="text-sm text-sage-700">
+                <h4 className="font-semibold text-white">Activity Level</h4>
+                <p className="text-sm text-gray-400">
                   Activity 1-2 days before seizures: {healthInsights.activity_analysis.before_seizure_avg_distance.toFixed(2)} mi vs baseline{' '}
                   {healthInsights.activity_analysis.baseline_avg_distance?.toFixed(2) || 'N/A'} mi
                 </p>

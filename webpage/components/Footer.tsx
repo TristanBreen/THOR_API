@@ -1,24 +1,26 @@
 import React from 'react'
 
 const Footer: React.FC = () => {
-  const [lastRefresh, setLastRefresh] = React.useState<Date>(new Date())
+  const [lastRefresh, setLastRefresh] = React.useState<string>('')
+  const [isMounted, setIsMounted] = React.useState(false)
 
   React.useEffect(() => {
-    setLastRefresh(new Date())
+    setLastRefresh(new Date().toLocaleTimeString())
+    setIsMounted(true)
   }, [])
 
   return (
-    <footer className="mt-16 pt-8 border-t border-cream-200 text-center text-sm text-sage-600">
+    <footer className="mt-16 pt-8 border-t border-gray-700 text-center text-sm text-gray-400">
       <p>
         Seizure Wellness Dashboard v2.0 • Built with React, Next.js & Tailwind CSS
       </p>
       <p className="mt-2">
-        Last sync: {lastRefresh.toLocaleTimeString()} • Auto-refreshes every minute
+        Last sync: {isMounted ? lastRefresh : '—'} • Auto-refreshes every minute
       </p>
       <div className="mt-4 flex justify-center gap-6 text-xs">
-        <a href="#" className="text-sage-500 hover:text-sage-700 transition-colors">Privacy</a>
-        <a href="#" className="text-sage-500 hover:text-sage-700 transition-colors">Terms</a>
-        <a href="#" className="text-sage-500 hover:text-sage-700 transition-colors">Contact</a>
+        <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Privacy</a>
+        <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Terms</a>
+        <a href="#" className="text-gray-500 hover:text-gray-300 transition-colors">Contact</a>
       </div>
     </footer>
   )

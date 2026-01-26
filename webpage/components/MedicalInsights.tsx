@@ -88,7 +88,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
       {activeTab === 'food' && (
         <div className="space-y-4">
           <div className="card bg-gradient-to-br from-blue-50 to-cyan-50">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Food Intake Impact on Seizure Duration</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Food Intake Impact on Seizure Duration</h3>
 
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white p-4 rounded-lg border-l-4 border-blue-500">
@@ -119,7 +119,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
             </div>
 
             <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-4">Duration Comparison</h4>
+              <h4 className="font-semibold text-gray-200 mb-4">Duration Comparison</h4>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={medicalCharts.food_impact_comparison}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -154,7 +154,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
       {activeTab === 'menstrual' && (
         <div className="space-y-4">
           <div className="card bg-gradient-to-br from-pink-50 to-rose-50">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Menstrual Cycle Analysis</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Menstrual Cycle Analysis</h3>
 
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white p-4 rounded-lg border-l-4 border-pink-500">
@@ -176,7 +176,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="bg-white p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-4">Duration Comparison</h4>
+                <h4 className="font-semibold text-gray-200 mb-4">Duration Comparison</h4>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
@@ -199,7 +199,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
               </div>
 
               <div className="bg-white p-4 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2">Duration Difference</h4>
+                <h4 className="font-semibold text-gray-200 mb-2">Duration Difference</h4>
                 <div className="space-y-3">
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Period Seizures</div>
@@ -245,7 +245,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
       {activeTab === 'pain' && (
         <div className="space-y-4">
           <div className="card bg-gradient-to-br from-amber-50 to-orange-50">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Pain Level Correlation</h3>
+            <h3 className="text-xl font-bold text-white mb-4">Pain Level Correlation</h3>
 
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white p-4 rounded-lg border-l-4 border-amber-500">
@@ -266,7 +266,7 @@ const MedicalInsights: React.FC<MedicalInsightsProps> = ({ medicalInsights, medi
             </div>
 
             <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-4">Recent Seizures & Pain Levels</h4>
+              <h4 className="font-semibold text-gray-200 mb-4">Recent Seizures & Pain Levels</h4>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={medicalCharts.pain_seizure_correlation}>
                   <CartesianGrid strokeDasharray="3 3" />

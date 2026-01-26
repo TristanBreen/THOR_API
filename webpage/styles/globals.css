@@ -8,37 +8,40 @@
   }
 
   body {
-    @apply bg-gradient-to-br from-sage-50 via-cream-50 to-cream-100 text-sage-900;
+    background-color: #1F2020;
+    @apply text-gray-100;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-white/80 backdrop-blur-md rounded-lg shadow-soft hover:shadow-hover transition-all duration-300;
+    background-color: rgba(60, 60, 60, 0.5);
+    @apply backdrop-blur-md rounded-lg shadow-soft hover:shadow-hover transition-all duration-300;
   }
 
   .card-dark {
-    @apply bg-sage-900/80 backdrop-blur-md rounded-lg shadow-soft text-cream-50;
+    background-color: rgba(60, 60, 60, 0.5);
+    @apply backdrop-blur-md rounded-lg shadow-soft text-gray-100;
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-gradient-to-r from-sage-600 to-sage-700 text-cream-50 rounded-lg font-semibold hover:from-sage-700 hover:to-sage-800 transition-all duration-300 hover:shadow-hover active:scale-95;
+    @apply px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 hover:shadow-hover active:scale-95;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-cream-200 text-sage-900 rounded-lg font-semibold hover:bg-cream-300 transition-all duration-300 hover:shadow-soft;
+    @apply px-6 py-3 bg-gray-700 text-gray-100 rounded-lg font-semibold hover:bg-gray-600 transition-all duration-300 hover:shadow-soft;
   }
 
   .stat-card {
-    @apply card p-6 border-l-4 border-sage-500 hover:scale-105 transition-transform duration-300;
+    @apply card p-6 border-l-4 border-blue-500 hover:scale-105 transition-transform duration-300;
   }
 
   .insight-item {
-    @apply flex items-start gap-4 py-4 border-b border-cream-200 last:border-b-0;
+    @apply flex items-start gap-4 py-4 border-b border-gray-700 last:border-b-0;
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-sage-600 to-rose-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent;
   }
 }
 
@@ -48,14 +51,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #1F2020;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #3C3C3C;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #505050;
 }

@@ -91,12 +91,12 @@ const PNESAnalysis: React.FC<PNESAnalysisProps> = ({ pnesAnalysis, isLoading }) 
       {/* Clinical Manifestation Factors */}
       {pnesAnalysis.risk_factors.length > 0 && (
         <div className="card p-8">
-          <h4 className="font-bold text-gray-900 mb-6 text-xl">🔍 PNES Manifestation Factors</h4>
+          <h4 className="font-bold text-white mb-6 text-xl">🔍 PNES Manifestation Factors</h4>
           <div className="space-y-4">
             {pnesAnalysis.risk_factors.map((factor, idx) => (
               <div key={idx} className="border-l-4 border-purple-400 bg-purple-50 rounded-lg p-5 hover:bg-purple-100 transition-colors">
                 <div className="flex items-start justify-between mb-3 gap-4">
-                  <h5 className="font-bold text-gray-900 text-base">{factor.indicator}</h5>
+                  <h5 className="font-bold text-gray-200 text-base">{factor.indicator}</h5>
                   <span className="text-sm font-bold text-white bg-purple-600 px-3 py-1 rounded-full whitespace-nowrap">
                     Severity: {factor.score}%
                   </span>
