@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="mt-16 pt-8 border-t border-gray-700 text-center text-sm text-gray-400">
       <p>
-        Seizure Wellness Dashboard v2.0 • Built with React, Next.js & Tailwind CSS
+        Seizure Wellness Dashboard v3.1 • Built with React, Next.js & Tailwind CSS
       </p>
       <p className="mt-2">
         Last sync: {isMounted ? lastRefresh : '—'} • Auto-refreshes every minute
