@@ -341,8 +341,16 @@ function calculateMedicalInsights(
   const intervals: number[] = []
 
   for (let i = 1; i < sortedSeizures.length; i++) {
-    const prevTime = new Date(sortedSeizures[i - 1].timestamp).getTime()
-    const currTime = new Date(sortedSeizures[i].timestamp).getTime()
+    // Parse timestamp as local time: format is YYYY-MM-DDTHH:MM:SS
+    const parseLocalTime = (timestamp: string) => {
+      const [datePart, timePart] = timestamp.split('T')
+      const [year, month, day] = datePart.split('-').map(Number)
+      const [hours, minutes, seconds] = timePart.split(':').map(Number)
+      return new Date(year, month - 1, day, hours, minutes, seconds).getTime()
+    }
+    
+    const prevTime = parseLocalTime(sortedSeizures[i - 1].timestamp)
+    const currTime = parseLocalTime(sortedSeizures[i].timestamp)
     const intervalHours = (currTime - prevTime) / (1000 * 60 * 60)
     if (intervalHours > 0) {
       intervals.push(Math.round(intervalHours))
