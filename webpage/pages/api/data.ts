@@ -489,7 +489,8 @@ function analyzePNESIndicators(
     riskFactors.push({
       indicator: 'Low Hormonal Correlation',
       score: periodPercent.toFixed(1),
-      description: `Only ${periodPercent.toFixed(1)}% of seizures occur during menstrual period`,
+      //description: `Only ${periodPercent.toFixed(1)}% of seizures occur during menstrual period`,
+      description: `Menstrual Cycle does not have any relevant effect on seizures`,
       pnes_relevance: 'MODERATE - PNES psychological, not hormonal; epilepsy often hormone-influenced',
     })
     pnesScore += 8
