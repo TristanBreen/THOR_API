@@ -160,14 +160,13 @@ function transformSeizureData(rawSeizures: any[]): any[] {
     // Parse hour of day from time string
     const hour = timeStr ? parseInt(timeStr.split(':')[0]) : 12
 
-    // Check if period data exists (not NULL, not empty, not 'False')
-    const periodStr = (s['Peiod'] || '').toString().toLowerCase().trim()
-    const hasPeriodData = periodStr && periodStr !== 'null' && periodStr !== 'false' && periodStr !== ''
-    const period = hasPeriodData
+    // Check if Peiod column is "True" (case-insensitive, trim whitespace)
+    const periodStr = (s['Peiod'] || '').toString().trim()
+    const period = periodStr === 'True'
 
     // Check if food was eaten (look at either 'Food Eaten' or 'Eaten' fields)
-    const foodEatenStr = (s['Food Eaten'] || s['Eaten'] || '').toString().toLowerCase().trim()
-    const foodEaten = foodEatenStr === 'true' || (foodEatenStr && foodEatenStr !== 'null' && foodEatenStr !== 'false')
+    const foodEatenStr = (s['Food Eaten'] || s['Eaten'] || '').toString().trim()
+    const food_eaten = foodEatenStr === 'True'
 
     return {
       timestamp,
@@ -176,7 +175,7 @@ function transformSeizureData(rawSeizures: any[]): any[] {
       duration_seconds: duration,
       hour_of_day: hour,
       period: period,
-      food_eaten: foodEaten,
+      food_eaten: food_eaten,
       // Keep original fields for reference
       ...s,
     }
