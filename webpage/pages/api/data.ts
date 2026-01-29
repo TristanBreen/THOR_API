@@ -147,6 +147,42 @@ function parseCSV(content: string): any[] {
   return rows
 }
 
+function transformSeizureData(rawSeizures: any[]): any[] {
+  return rawSeizures.map((s) => {
+    // Parse the timestamp from Date and Time fields
+    const dateStr = s.Date || ''
+    const timeStr = s.Time || '12:00:00'
+    const timestamp = `${dateStr}T${timeStr}`
+
+    // Parse duration as number (in seconds)
+    const duration = parseInt(s.Duration) || 0
+
+    // Parse hour of day from time string
+    const hour = timeStr ? parseInt(timeStr.split(':')[0]) : 12
+
+    // Check if period data exists (not NULL, not empty, not 'False')
+    const periodStr = (s['Peiod'] || '').toString().toLowerCase().trim()
+    const hasPeriodData = periodStr && periodStr !== 'null' && periodStr !== 'false' && periodStr !== ''
+    const period = hasPeriodData
+
+    // Check if food was eaten (look at either 'Food Eaten' or 'Eaten' fields)
+    const foodEatenStr = (s['Food Eaten'] || s['Eaten'] || '').toString().toLowerCase().trim()
+    const foodEaten = foodEatenStr === 'true' || (foodEatenStr && foodEatenStr !== 'null' && foodEatenStr !== 'false')
+
+    return {
+      timestamp,
+      date: dateStr,
+      time: timeStr,
+      duration_seconds: duration,
+      hour_of_day: hour,
+      period: period,
+      food_eaten: foodEaten,
+      // Keep original fields for reference
+      ...s,
+    }
+  })
+}
+
 function calculatePainAnalytics(painRecords: any[]) {
   if (!painRecords || painRecords.length === 0) {
     return {
@@ -766,7 +802,8 @@ export default function handler(
 
     if (fs.existsSync(seizureFile)) {
       const seizureContent = fs.readFileSync(seizureFile, 'utf-8')
-      seizures = parseCSV(seizureContent)
+      const rawSeizures = parseCSV(seizureContent)
+      seizures = transformSeizureData(rawSeizures)
       console.log('Seizures loaded:', seizures.length)
     }
 
