@@ -17,7 +17,8 @@ DATA="$REPO/Data"
 APPEND_ONLY="seizures.csv pain.csv appleWatchData.csv"
 
 say()  { printf '%s\n' "$*"; }
-fail() { say "DEPLOY STOPPED: $*"; printf '%s - Deployment FAILED: %s\n' "$(date -u)" "$*" >> "$LOG"; exit 1; }
+fail() { trap - ERR; say "DEPLOY STOPPED: $*"; printf '%s - Deployment FAILED: %s\n' "$(date -u)" "$*" >> "$LOG"; exit 1; }
+trap 'fail "unexpected error on line $LINENO: $BASH_COMMAND"' ERR   # e.g. a failed container build
 
 check_data() {   # $1 = snapshot dir, $2 = live data dir
   local snap=$1 live=$2 f
@@ -31,7 +32,7 @@ check_data() {   # $1 = snapshot dir, $2 = live data dir
     cmp -s -n "$old_size" "$snap/$f" "$live/$f" || { say "$f: existing entries changed"; return 1; }
   done
 }
-[ "${1:-}" = "--check-data" ] && { check_data "$2" "$3"; exit $?; }
+[ "${1:-}" = "--check-data" ] && { trap - ERR; check_data "$2" "$3" && exit 0 || exit 1; }
 
 say "== THOR deploy $(date -u) =="
 [ -d "$DATA" ] && [ -f "$DATA/seizures.csv" ] || fail "data folder not found at $DATA"
