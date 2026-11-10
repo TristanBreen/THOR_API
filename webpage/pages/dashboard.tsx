@@ -239,9 +239,8 @@ export default function Dashboard() {
               </div>
               <div className="min-w-0">
                 <h1 className="font-serif text-[28px] font-bold leading-tight tracking-tight sm:text-4xl" style={{ color: C.ink }}>Seizure Dashboard</h1>
-                <p className="mt-0.5 text-[14px] sm:text-[15px]" style={{ color: C.muted }}>
-                  {today}{s ? <span className="opacity-80"> · Updated {s.updated}</span> : ' · Loading…'}
-                </p>
+                <p className="mt-0.5 text-[15px] font-medium" style={{ color: C.muted }}>{today}</p>
+                <p className="text-[12px]" style={{ color: C.muted, opacity: 0.8 }}>{s ? `Updated ${s.updated}` : 'Loading…'}</p>
               </div>
             </div>
             <button onClick={load} aria-label="Refresh" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-sm active:scale-95 sm:h-12 sm:w-12" style={{ background: C.card, border: `1px solid ${C.line}` }}>
