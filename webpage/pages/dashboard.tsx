@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
-import { RefreshCw, Download, ChevronDown } from 'lucide-react'
+import { RefreshCw, Download, ChevronDown, Zap } from 'lucide-react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line, CartesianGrid } from 'recharts'
 
 type Summary = any
@@ -210,6 +210,8 @@ export default function Dashboard() {
   const [s, setS] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [today, setToday] = useState('')   // set in the browser (her local date), avoids server/client mismatch
+  useEffect(() => { setToday(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })) }, [])
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -229,19 +231,26 @@ export default function Dashboard() {
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
       </Head>
       <main className="min-h-screen pb-10" style={{ background: C.bg }}>
-        <header className="sticky top-0 z-10 border-b backdrop-blur" style={{ background: C.bg + 'EE', borderColor: C.line, paddingTop: 'env(safe-area-inset-top)' }}>
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <div>
-              <h1 className="text-lg font-bold" style={{ color: C.ink }}>Seizure Dashboard</h1>
-              <p className="text-[12px]" style={{ color: C.muted }}>{s ? `Updated ${s.updated}` : 'Loading…'}</p>
+        <header className="border-b" style={{ background: `linear-gradient(180deg, #EEF3EB 0%, ${C.bg} 100%)`, borderColor: C.line, paddingTop: 'env(safe-area-inset-top)' }}>
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 pb-5 pt-6 sm:pb-7 sm:pt-9">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm sm:h-14 sm:w-14" style={{ background: C.sage }}>
+                <Zap className="h-6 w-6 sm:h-7 sm:w-7" fill="#FFFDF8" strokeWidth={0} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-serif text-[28px] font-bold leading-tight tracking-tight sm:text-4xl" style={{ color: C.ink }}>Seizure Dashboard</h1>
+                <p className="mt-0.5 text-[14px] sm:text-[15px]" style={{ color: C.muted }}>
+                  {today}{s ? <span className="opacity-80"> · Updated {s.updated}</span> : ' · Loading…'}
+                </p>
+              </div>
             </div>
-            <button onClick={load} aria-label="Refresh" className="rounded-full p-2.5" style={{ background: C.card, border: `1px solid ${C.line}` }}>
+            <button onClick={load} aria-label="Refresh" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-sm active:scale-95 sm:h-12 sm:w-12" style={{ background: C.card, border: `1px solid ${C.line}` }}>
               <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} style={{ color: C.ink }} />
             </button>
           </div>
         </header>
 
-        <div className="mx-auto max-w-5xl space-y-3 px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
+        <div className="mx-auto max-w-5xl space-y-3 px-4 pt-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
           {error && <div className="rounded-xl p-3 text-[14px] lg:col-span-2" style={{ background: '#F8E5E9', color: C.rose }}>{error}</div>}
           {!s && !error && [1, 2, 3].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />)}
           {s && (<>
