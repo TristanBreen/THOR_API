@@ -169,6 +169,7 @@ function Calendar({ s }: { s: Summary }) {
         <span className="text-[15px] font-semibold" style={{ color: C.ink }}>{first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
         <span className="text-[13px]" style={{ color: C.muted }}>{total} seizure{total === 1 ? '' : 's'}</span>
       </div>
+      <div className="mx-auto max-w-[380px]">
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium" style={{ color: C.muted }}>
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <div key={i}>{d}</div>)}
       </div>
@@ -185,6 +186,7 @@ function Calendar({ s }: { s: Summary }) {
           )
         })}
       </div>
+      </div>
       <Muted className="mt-2">Shaded days had a seizure; darker means more than one.</Muted>
     </Card>
   )
@@ -194,7 +196,7 @@ function Duration({ s }: { s: Summary }) {
   const data = s.duration_monthly.filter((m: any) => m.median != null)
   const top = Math.max(120, Math.ceil(Math.max(...data.map((m: any) => m.median)) / 30) * 30)
   const ticks = Array.from({ length: top / 30 + 1 }, (_, i) => i * 30).filter((v) => v % 60 === 0 || top <= 150)
-  const mmss = (v: number) => v % 60 ? `${Math.floor(v / 60)}m${v % 60}` : `${v / 60}m`
+  const mmss = (v: number) => v === 0 ? '0' : v < 60 ? `${v}s` : v % 60 ? `${Math.floor(v / 60)}m${v % 60}` : `${v / 60}m`
   const t = s.duration_trend
   return (
     <Card title="How long they last" right={<span className="text-[13px]" style={{ color: C.muted }}>median per month</span>}>
