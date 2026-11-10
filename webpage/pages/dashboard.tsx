@@ -191,7 +191,10 @@ function Calendar({ s }: { s: Summary }) {
 }
 
 function Duration({ s }: { s: Summary }) {
-  const data = s.duration_monthly.filter((m: any) => m.median != null).map((m: any) => ({ ...m, minutes: Math.round((m.median / 60) * 100) / 100 }))
+  const data = s.duration_monthly.filter((m: any) => m.median != null)
+  const top = Math.max(120, Math.ceil(Math.max(...data.map((m: any) => m.median)) / 30) * 30)
+  const ticks = Array.from({ length: top / 30 + 1 }, (_, i) => i * 30).filter((v) => v % 60 === 0 || top <= 150)
+  const mmss = (v: number) => v % 60 ? `${Math.floor(v / 60)}m${v % 60}` : `${v / 60}m`
   const t = s.duration_trend
   return (
     <Card title="How long they last" right={<span className="text-[13px]" style={{ color: C.muted }}>median per month</span>}>
@@ -206,9 +209,9 @@ function Duration({ s }: { s: Summary }) {
           <LineChart data={data} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke={C.line} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={28} />
-            <YAxis width={34} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={[0, 'auto']} tickFormatter={(v) => `${v}m`} />
+            <YAxis width={44} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={[0, top]} ticks={ticks} tickFormatter={mmss} />
             <Tooltip formatter={(_v: any, _n: any, item: any) => [`${Math.floor(item.payload.median / 60)}m ${String(item.payload.median % 60).padStart(2, '0')}s (${item.payload.n} seizures)`, 'median']} />
-            <Line dataKey="minutes" stroke={C.sage} strokeWidth={2} dot={{ r: 3, fill: C.sage }} />
+            <Line dataKey="median" stroke={C.sage} strokeWidth={2} dot={{ r: 3, fill: C.sage }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
