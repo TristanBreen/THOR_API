@@ -54,12 +54,7 @@ function loadPrediction(now: Date) {
       updated: s.updated ? timeLabel(new Date(s.updated)) : null,
       validation: s.validation || null, live: s.live_accuracy || {},
     }
-  } catch { /* fall back to the old model's file */ }
-  try {
-    const txt = fs.readFileSync(path.join(DATA_DIR, 'prediction.txt'), 'utf-8')
-    const n = [...txt.matchAll(/([\d.]+)%/g)].map((m) => parseFloat(m[1]))
-    return { source: 'old', p24: n[0], p48: n[1], p72: n[2], typical24: null, level: 'usual', updated: null, validation: null, live: {} }
-  } catch { return null }
+  } catch { return null }   // shown as "Prediction not available right now"
 }
 
 export function buildSummary() {

@@ -22,7 +22,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       BASE_DATA_DIR = path.join(PARENT_DIR, 'Data')
     }
 
-    const predictionPath = path.join(BASE_DATA_DIR, 'prediction.txt')
+    const predictionPath = path.join(process.env.THOR_PREDICTIONS_DIR || '/predictions', 'prediction.txt')   // the prediction model's output
     const content = fs.readFileSync(predictionPath, 'utf-8')
 
     // Parse the prediction data

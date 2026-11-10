@@ -60,7 +60,7 @@ check_data "$SNAP" "$DATA" || fail "data check failed after code update; snapsho
 # 4. Rebuild and restart
 if [ "$SKIP_DOCKER" != 1 ]; then
   cd "$DOCKER_DIR"
-  docker compose up -d --build thor-api thor-webpage thor-scheduler
+  docker compose up -d --build thor-api thor-webpage
   ok=0
   for i in $(seq 1 40); do
     a=$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://127.0.0.1:5000/prediction || true)
