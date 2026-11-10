@@ -45,6 +45,8 @@ SEIZURE_FILE = os.path.join(BASE_DATA_DIR, "seizures.csv")
 PAIN_FILE = os.path.join(BASE_DATA_DIR, "pain.csv")
 APPLE_WATCH_FILE = os.path.join(BASE_DATA_DIR, "appleWatchData.csv")
 PREDICTION_FILE = os.path.join(BASE_DATA_DIR, "prediction.txt")
+# The new model (thor-predict-v2) writes here; used when present, otherwise the old model's file above
+PREDICTION_FILE_V2 = os.environ.get("THOR_PREDICTION_V2", "/predictions/prediction.txt")
 
 def getGoodMorningString():
     messages = [
@@ -524,10 +526,11 @@ def getprediction():
     Returns the current seizure prediction from prediction.txt
     """
     try:
-        if not os.path.exists(PREDICTION_FILE):
+        path = PREDICTION_FILE_V2 if os.path.exists(PREDICTION_FILE_V2) else PREDICTION_FILE
+        if not os.path.exists(path):
             return jsonify({"error": "Prediction file not found"}), 404
         
-        with open(PREDICTION_FILE, 'r', encoding='utf-8') as file:
+        with open(path, 'r', encoding='utf-8') as file:
             prediction_text = file.read().strip()
         
         if not prediction_text:
