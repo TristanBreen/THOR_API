@@ -299,3 +299,6 @@ Data/
 
 # Her data lives on the server only (never in git). Backups: ~/backups/thor + private thor-data-backup repo
 Data/
+
+# webpage/lib holds the dashboard's data code (not a Python lib folder)
+!webpage/lib/
