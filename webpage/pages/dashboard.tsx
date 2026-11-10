@@ -352,6 +352,9 @@ export default function Dashboard() {
             <Findings items={s.findings} />
             <div className="lg:col-span-2"><Log records={s.records} /></div>
             <div className="lg:col-span-2"><Details s={s} /></div>
+            <a href="/report" className="flex items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-semibold text-white lg:col-span-2" style={{ background: C.sage }}>
+              Doctor summary (printable)
+            </a>
             <a href="/api/export" className="flex items-center justify-center gap-2 rounded-xl border py-3 text-[14px] font-semibold lg:col-span-2" style={{ borderColor: C.line, color: C.ink, background: C.card }}>
               <Download className="h-4 w-4" /> Download all data (CSV)
             </a>

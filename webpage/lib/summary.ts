@@ -141,7 +141,7 @@ export function buildSummary() {
 
   // --- the log, newest first; flag entries logged under 2 minutes after the previous one
   const records = S.map((s, i) => ({
-    day: dayLabel(s.t), time: timeLabel(s.t), date: ymd(s.t), duration: durLabel(s.duration), period: s.period, eaten: s.eaten, food: s.food,
+    day: dayLabel(s.t), time: timeLabel(s.t), date: ymd(s.t), duration: durLabel(s.duration), duration_s: s.duration, period: s.period, eaten: s.eaten, food: s.food,
     possible_duplicate: i > 0 && s.t.getTime() - S[i - 1].t.getTime() < 120000,
   })).reverse()
 
@@ -151,12 +151,15 @@ export function buildSummary() {
     last: last ? { day: dayLabel(last.t), time: timeLabel(last.t), duration: durLabel(last.duration), days_since: daysSince } : null,
     month: { name: fmt(now, { month: 'long' }), count: byMonth.get(thisMonth) || 0, typical: prevMonths.length ? median(prevMonths) : null, day_of_month: now.getDate() },
     last30: { count: in30, prev: prev30 },
+    last90: S.filter((s) => now.getTime() - s.t.getTime() < 90 * DAY).length,
+    overall_duration: durs.length ? { median: durLabel(median(durs)), q1: durLabel(quant(durs, 0.25)), q3: durLabel(quant(durs, 0.75)), longest: durLabel(Math.max(...durs)), n: durs.length } : null,
+    generated: fmt(now, { month: 'long', day: 'numeric', year: 'numeric' }),
     prediction: loadPrediction(now),
     weekly, monthly, findings,
     streak: daysSince == null ? null : { current_days: Math.floor(daysSince), longest_days: gaps.length ? Math.floor(Math.max(...gaps, daysSince)) : Math.floor(daysSince), longer_before: gaps.filter((g) => g > daysSince).length, total_gaps: gaps.length },
     after_seizure: last && daysSince != null && daysSince < 3 && gaps.length > 10 ? { pct72: pct(within72, gaps.length), hours_left: Math.max(1, Math.round((3 - daysSince) * 24)) } : null,
     duration_trend: durTrend,
-    duration_monthly: monthly.map((m) => { const v = withDur.filter((s) => monthKey(s.t) === m.month).map((s) => s.duration!); return { month: m.month, label: m.label, median: v.length ? Math.round(median(v)) : null, n: v.length } }),
+    duration_monthly: monthly.map((m) => { const v = withDur.filter((s) => monthKey(s.t) === m.month).map((s) => s.duration!); return { month: m.month, label: m.label, median: v.length ? Math.round(median(v)) : null, max: v.length ? Math.max(...v) : null, n: v.length, count: m.count } }),
     calendar: (() => { const c: Record<string, number> = {}; S.forEach((s) => { const k = ymd(s.t); c[k] = (c[k] || 0) + 1 }); return c })(),
     today: ymd(now), first_day: n ? ymd(S[0].t) : null,
     pain: { latest: lastPain ? { value: lastPain.v, day: dayLabel(lastPain.t), time: timeLabel(lastPain.t) } : null, avg30: last30vals.length ? Math.round(mean(last30vals) * 10) / 10 : null, daily30 },
