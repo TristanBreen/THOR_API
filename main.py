@@ -8,6 +8,8 @@ import random
 import google.generativeai as genai
 from flask import Flask, request, jsonify
 from io import StringIO
+import sys
+sys.stdout.reconfigure(line_buffering=True)  # show [LOG]/[APPLEWATCH] lines in `docker logs` right away
 
 # Try to import config, but make it optional for startup
 try:
@@ -381,55 +383,74 @@ def trackpain():
 
     return jsonify({"message": message})
 
+APPLE_WATCH_INBOX = os.path.join(BASE_DATA_DIR, "applewatch_inbox")  # every upload, exactly as received
+
+
+def save_apple_watch_raw(payload, label):
+    """Keep a copy of every upload so nothing is lost, even if it can't be parsed yet."""
+    os.makedirs(APPLE_WATCH_INBOX, exist_ok=True)
+    safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in label)[:60]
+    name = datetime.now().strftime("%Y%m%d-%H%M%S-%f") + "-" + safe
+    with open(os.path.join(APPLE_WATCH_INBOX, name), "wb") as f:
+        f.write(payload)
+    return name
+
+
+def apple_watch_csv_texts(payload, filename=""):
+    """Turn one upload into CSV texts: plain CSV, CSV with a byte-order mark, or a zip of CSVs."""
+    import zipfile
+    from io import BytesIO
+    if payload[:2] == b"PK" or filename.lower().endswith(".zip"):
+        with zipfile.ZipFile(BytesIO(payload)) as z:
+            return [z.read(n).decode("utf-8-sig") for n in z.namelist() if n.lower().endswith(".csv")]
+    return [payload.decode("utf-8-sig")]
+
+
 def append_csv_data(csv_content):
     """
-    Appends CSV data to appleWatchData.csv
-    
-    Args:
-        csv_content (str): Raw CSV content as string
-        
-    Returns:
-        dict: Result with success status and message
+    Appends Apple Watch CSV rows to appleWatchData.csv.
+    Columns are matched by name (so a different column order still lands in the right place),
+    and hours already in the file are skipped (so re-sends and backfills don't duplicate).
     """
     try:
-        # Parse the CSV content
-        csv_file = StringIO(csv_content)
-        reader = csv.reader(csv_file)
-        rows = list(reader)
-        
+        rows = [r for r in csv.reader(StringIO(csv_content.strip())) if any(c.strip() for c in r)]
         if not rows:
             return {"success": False, "message": "CSV file is empty"}
-        
-        # First row is the header
-        header_row = rows[0]
-        data_rows = rows[1:]
-        
+        header, data_rows = [h.strip() for h in rows[0]], rows[1:]
         if not data_rows:
             return {"success": False, "message": "No data rows found (only header)"}
-        
-        # Check if target file exists
-        file_exists = os.path.exists(APPLE_WATCH_FILE)
-        
-        # If file doesn't exist, create it with the header
-        if not file_exists:
-            with open(APPLE_WATCH_FILE, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                writer.writerow(header_row)
-        
-        # Append data rows
-        with open(APPLE_WATCH_FILE, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerows(data_rows)
-        
-        rows_appended = len(data_rows)
-        print(f"[LOG] Appended {rows_appended} rows to {APPLE_WATCH_FILE}")
-        
-        return {
-            "success": True,
-            "message": f"Successfully appended {rows_appended} rows",
-            "rows_appended": rows_appended
-        }
-        
+
+        if os.path.exists(APPLE_WATCH_FILE):
+            with open(APPLE_WATCH_FILE, newline="", encoding="utf-8-sig") as f:
+                existing = list(csv.reader(f))
+            target_header = [h.strip() for h in existing[0]] if existing else header
+            seen = {r[0] for r in existing[1:] if r}
+        else:
+            target_header, seen = header, set()
+            with open(APPLE_WATCH_FILE, "w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerow(header)
+
+        unknown = [h for h in header if h not in target_header]
+        out, skipped = [], 0
+        for r in data_rows:
+            rec = dict(zip(header, r))
+            key = rec.get(target_header[0], r[0] if r else "")
+            if key in seen:
+                skipped += 1
+                continue
+            seen.add(key)
+            out.append([rec.get(h, "") for h in target_header])
+        with open(APPLE_WATCH_FILE, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(out)
+
+        msg = f"Successfully appended {len(out)} rows"
+        if skipped:
+            msg += f", skipped {skipped} already-saved rows"
+        if unknown:
+            msg += f" (new columns not in the file were kept only in the inbox copy: {', '.join(unknown)})"
+        print(f"[LOG] Apple Watch: {msg}")
+        return {"success": True, "message": msg, "rows_appended": len(out), "rows_skipped": skipped}
+
     except Exception as e:
         print(f"[ERROR] Failed to process CSV: {str(e)}")
         return {"success": False, "message": f"Error processing CSV: {str(e)}"}
@@ -438,44 +459,39 @@ def append_csv_data(csv_content):
 @app.route("/applewatch", methods=["POST"])
 def track_apple_watch():
     """
-    Endpoint to receive Apple Watch health data CSV from iOS Shortcuts
-    Accepts raw CSV content in request body OR multipart file upload
+    Receives Apple Watch health data (Health Auto Export / iOS Shortcuts).
+    Accepts a file upload under any field name (with or without .csv, or a .zip of CSVs), or the CSV
+    as the raw request body. Every upload is saved to Data/applewatch_inbox first, so nothing is lost.
     """
     try:
-        # Check if it's a file upload (multipart form data)
-        if 'file' in request.files:
-            uploaded_file = request.files['file']
-            if uploaded_file.filename == '' or not uploaded_file.filename.endswith('.csv'):
-                return jsonify({
-                    "success": False,
-                    "error": "Invalid CSV file"
-                }), 400
-            csv_content = uploaded_file.read().decode('utf-8')
-        
-        # Otherwise, get raw body content
-        else:
-            csv_content = request.get_data(as_text=True)
-            
-            if not csv_content or not csv_content.strip():
-                return jsonify({
-                    "success": False,
-                    "error": "Request body is empty. Please send CSV content in the request body or as a file upload."
-                }), 400
-        
-        # Process the CSV data
-        result = append_csv_data(csv_content)
-        
-        if result["success"]:
-            return jsonify(result), 200
-        else:
-            return jsonify({"success": False, "error": result["message"]}), 400
-            
+        uploads = [(f.filename or key, f.read()) for key, f in request.files.items(multi=True)]
+        if not uploads:
+            uploads = [("body", request.get_data())]
+        saved = [save_apple_watch_raw(data, name) for name, data in uploads]
+        print(f"[APPLEWATCH] content-type={request.content_type!r} length={request.content_length} "
+              f"files={[n for n, _ in uploads] if request.files else []} form={list(request.form.keys())} "
+              f"sizes={[len(d) for _, d in uploads]} saved={saved}")
+
+        texts = []
+        for name, data in uploads:
+            texts += apple_watch_csv_texts(data, name)
+        if not any(t.strip() for t in texts):
+            return jsonify({"success": False, "error": "Request was empty. Send the CSV in the body or as a file upload."}), 400
+        if texts and texts[0].lstrip()[:1] in ("{", "["):
+            print("[APPLEWATCH] received JSON, not CSV; saved to the inbox for import later")
+            return jsonify({"success": False, "error": "Got JSON; please export as CSV. (Saved on the server, not lost.)"}), 400
+
+        results = [append_csv_data(t) for t in texts if t.strip()]
+        ok = [r for r in results if r["success"]]
+        if ok:
+            return jsonify({"success": True, "message": "; ".join(r["message"] for r in ok),
+                            "rows_appended": sum(r["rows_appended"] for r in ok)}), 200
+        print(f"[APPLEWATCH] rejected: {results[0]['message'] if results else 'nothing to read'}")
+        return jsonify({"success": False, "error": results[0]["message"] if results else "Nothing to read"}), 400
+
     except Exception as e:
-        print(f"[ERROR] Endpoint error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": f"Server error: {str(e)}"
-        }), 500
+        print(f"[ERROR] Apple Watch endpoint error: {str(e)}")
+        return jsonify({"success": False, "error": f"Server error: {str(e)}"}), 500
 
 @app.route("/nextseizure", methods=["GET"])
 def getnextseizure():

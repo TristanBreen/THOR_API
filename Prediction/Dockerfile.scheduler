@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run the scheduler/training script
-CMD ["python", "train_model.py"]
+CMD ["python", "scheduler_service.py"]
