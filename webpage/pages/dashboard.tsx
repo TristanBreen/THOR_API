@@ -66,7 +66,7 @@ function Risk({ p, after }: { p: any; after?: any }) {
     <Card title="Chance of a seizure" right={p.source === 'v2' && <span className="rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ color: lvl[1], background: lvl[2] }}>{lvl[0]}</span>}>
       {after && (
         <div className="mb-3 rounded-xl px-3 py-2 text-[13px] leading-snug" style={{ background: '#FBF1DF', color: '#7A5212' }}>
-          The 3 days after a seizure are her highest-risk window: another followed {after.pct72}% of the time. About {after.hours_left} hours to go.
+          After a seizure, another has followed within 3 days {after.pct72}% of the time.
         </div>
       )}
       <div className="grid grid-cols-3 gap-2 text-center">

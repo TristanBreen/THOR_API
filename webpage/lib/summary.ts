@@ -85,7 +85,7 @@ export function buildSummary() {
   const gaps = S.slice(1).map((s, i) => (s.t.getTime() - S[i].t.getTime()) / DAY)
   const within24 = gaps.filter((g) => g <= 1).length, within72 = gaps.filter((g) => g <= 3).length
   if (gaps.length > 10) {
-    findings.push({ title: 'The days after a seizure', text: `In the 3 days after a seizure, another followed ${pct(within72, gaps.length)}% of the time (${pct(within24, gaps.length)}% within 24 hours). After that, the chance drops. The typical gap is ${median(gaps) < 1 ? Math.round(median(gaps) * 24) + ' hours' : median(gaps).toFixed(1) + ' days'}.` })
+    findings.push({ title: 'The days after a seizure', text: `In the 3 days after a seizure, another followed ${pct(within72, gaps.length)}% of the time (${pct(within24, gaps.length)}% within 24 hours). The typical gap is ${median(gaps) < 1 ? Math.round(median(gaps) * 24) + ' hours' : median(gaps).toFixed(1) + ' days'}.` })
   }
   const busiest = monthly.reduce((a, b) => (b.count > (a?.count ?? -1) ? b : a), monthly[0])
   if (busiest && prevMonths.length >= 3) {
