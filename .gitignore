@@ -296,3 +296,6 @@ yarn-error.log*
 Prediction/models/
 Prediction/Visualizations/
 Data/
+
+# Her data lives on the server only (never in git). Backups: ~/backups/thor + private thor-data-backup repo
+Data/
