@@ -83,9 +83,9 @@ export function buildSummary() {
   // --- honest findings (each says what it's based on)
   const findings: { title: string; text: string }[] = []
   const gaps = S.slice(1).map((s, i) => (s.t.getTime() - S[i].t.getTime()) / DAY)
+  const within24 = gaps.filter((g) => g <= 1).length, within72 = gaps.filter((g) => g <= 3).length
   if (gaps.length > 10) {
-    const close = gaps.filter((g) => g <= 3).length
-    findings.push({ title: 'They tend to come in clusters', text: `${close} of ${gaps.length} seizures (${pct(close, gaps.length)}%) came within 3 days of the one before. The typical gap is ${median(gaps) < 1 ? Math.round(median(gaps) * 24) + ' hours' : median(gaps).toFixed(1) + ' days'}.` })
+    findings.push({ title: 'The days after a seizure', text: `In the 3 days after a seizure, another followed ${pct(within72, gaps.length)}% of the time (${pct(within24, gaps.length)}% within 24 hours). After that, the chance drops. The typical gap is ${median(gaps) < 1 ? Math.round(median(gaps) * 24) + ' hours' : median(gaps).toFixed(1) + ' days'}.` })
   }
   const busiest = monthly.reduce((a, b) => (b.count > (a?.count ?? -1) ? b : a), monthly[0])
   if (busiest && prevMonths.length >= 3) {
@@ -96,6 +96,22 @@ export function buildSummary() {
   if (n) findings.push({ title: 'Time of day', text: `${pct(afternoon, n)}% were logged between 12 and 6 PM. This shows when they were logged; seizures during sleep may go unrecorded.` })
   const durs = S.map((s) => s.duration).filter((d): d is number => d != null && d > 0)
   if (durs.length) findings.push({ title: 'How long they last', text: `Typically ${durLabel(median(durs))}; most are between ${durLabel(quant(durs, 0.25))} and ${durLabel(quant(durs, 0.75))}. Longest: ${durLabel(Math.max(...durs))}.` })
+  const withDur = S.filter((s) => s.duration != null && s.duration > 0)
+  const recentDur = withDur.slice(-10).map((s) => s.duration!), priorDur = withDur.slice(-40, -10).map((s) => s.duration!)
+  let durTrend: any = null
+  if (recentDur.length >= 8 && priorDur.length >= 15) {
+    const a = median(recentDur), b = median(priorDur), change = (a - b) / b
+    durTrend = { recent: durLabel(a), prior: durLabel(b), direction: change > 0.2 ? 'longer' : change < -0.2 ? 'shorter' : 'same' }
+    findings.unshift({ title: durTrend.direction === 'same' ? 'Seizure length is steady' : `Recent seizures have been ${durTrend.direction}`,
+      text: `The last 10 lasted ${durTrend.recent} (median) vs ${durTrend.prior} for the 30 before.${durTrend.direction === 'longer' ? ' Worth mentioning to her doctor. Part of it could be a change in how they’re timed.' : ''}` })
+  }
+  const dowCounts = [1, 2, 3, 4, 5, 6, 0].map((d) => S.filter((s) => s.t.getDay() === d).length)   // Mon..Sun
+  if (n >= 50) {
+    const exp = n / 7, chi = dowCounts.reduce((a, c) => a + (c - exp) ** 2 / exp, 0)          // > 12.6 = unlikely by chance (5%)
+    const wkday = dowCounts.slice(0, 5).reduce((a, b) => a + b, 0) / 5, wkend = (dowCounts[5] + dowCounts[6]) / 2
+    if (chi > 12.6 && Math.abs(wkday - wkend) / Math.max(wkday, wkend) > 0.25)
+      findings.push({ title: wkend < wkday ? 'Weekends are quieter' : 'Weekends are busier', text: `Since tracking began, each weekday has had about ${Math.round(wkday)} seizures in total, vs about ${Math.round(wkend)} each for Saturday and Sunday. That's more of a difference than chance would explain. It could reflect routine, stress or where she is, not necessarily the day itself.` })
+  }
   const withP = S.filter((s) => s.period !== null); const onP = withP.filter((s) => s.period).length
   if (withP.length) findings.push({ title: 'Period', text: `${onP} of ${withP.length} seizures (${pct(onP, withP.length)}%) were logged during her period. Period is only recorded when a seizure is logged, so this can't show a monthly pattern yet.` })
   const withF = S.filter((s) => s.eaten !== null && s.duration != null)
@@ -137,6 +153,12 @@ export function buildSummary() {
     last30: { count: in30, prev: prev30 },
     prediction: loadPrediction(now),
     weekly, monthly, findings,
+    streak: daysSince == null ? null : { current_days: Math.floor(daysSince), longest_days: gaps.length ? Math.floor(Math.max(...gaps, daysSince)) : Math.floor(daysSince), longer_before: gaps.filter((g) => g > daysSince).length, total_gaps: gaps.length },
+    after_seizure: last && daysSince != null && daysSince < 3 && gaps.length > 10 ? { pct72: pct(within72, gaps.length), hours_left: Math.max(1, Math.round((3 - daysSince) * 24)) } : null,
+    duration_trend: durTrend,
+    duration_monthly: monthly.map((m) => { const v = withDur.filter((s) => monthKey(s.t) === m.month).map((s) => s.duration!); return { month: m.month, label: m.label, median: v.length ? Math.round(median(v)) : null, n: v.length } }),
+    calendar: (() => { const c: Record<string, number> = {}; S.forEach((s) => { const k = ymd(s.t); c[k] = (c[k] || 0) + 1 }); return c })(),
+    today: ymd(now), first_day: n ? ymd(S[0].t) : null,
     pain: { latest: lastPain ? { value: lastPain.v, day: dayLabel(lastPain.t), time: timeLabel(lastPain.t) } : null, avg30: last30vals.length ? Math.round(mean(last30vals) * 10) / 10 : null, daily30 },
     details: {
       hours,

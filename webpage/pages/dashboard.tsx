@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
-import { RefreshCw, Download, ChevronDown, Zap } from 'lucide-react'
+import { RefreshCw, Download, ChevronDown, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line, CartesianGrid } from 'recharts'
 
 type Summary = any
@@ -37,6 +37,17 @@ function Hero({ s }: { s: Summary }) {
         <Stat label={`This ${s.month.name}`} value={s.month.count} note={typ != null ? `typical month: ${typ % 1 ? typ.toFixed(1) : typ}` : ''} />
         <Stat label="Last 30 days" value={s.last30.count} note={`30 days before: ${s.last30.prev}`} />
       </div>
+      {s.streak && s.streak.longest_days > 0 && (
+        <div className="mt-4">
+          <div className="flex justify-between text-[12px]" style={{ color: C.muted }}>
+            <span>Seizure-free stretch</span><span>longest: {s.streak.longest_days} days</span>
+          </div>
+          <div className="mt-1 h-2 overflow-hidden rounded-full" style={{ background: C.bg }}>
+            <div className="h-full rounded-full" style={{ width: `${Math.min(100, (s.streak.current_days / s.streak.longest_days) * 100)}%`, background: C.sage, minWidth: 6 }} />
+          </div>
+          <Muted className="mt-1">{s.streak.longer_before === 0 ? 'Her longest stretch yet.' : `${s.streak.longer_before} of ${s.streak.total_gaps} past stretches were longer than this one so far.`}</Muted>
+        </div>
+      )}
     </Card>
   )
 }
@@ -48,11 +59,16 @@ const Stat = ({ label, value, note }: any) => (
   </div>
 )
 
-function Risk({ p }: { p: any }) {
+function Risk({ p, after }: { p: any; after?: any }) {
   if (!p) return <Card title="Chance of a seizure"><Muted>Prediction not available right now.</Muted></Card>
   const lvl = { lower: ['Lower than usual', C.sage, '#E8F1EA'], usual: ['About usual', C.amber, '#FBF1DF'], higher: ['Higher than usual', C.rose, '#F8E5E9'] }[p.level as 'lower' | 'usual' | 'higher']
   return (
     <Card title="Chance of a seizure" right={p.source === 'v2' && <span className="rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ color: lvl[1], background: lvl[2] }}>{lvl[0]}</span>}>
+      {after && (
+        <div className="mb-3 rounded-xl px-3 py-2 text-[13px] leading-snug" style={{ background: '#FBF1DF', color: '#7A5212' }}>
+          The 3 days after a seizure are her highest-risk window: another followed {after.pct72}% of the time. About {after.hours_left} hours to go.
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2 text-center">
         {[['24h', 'next 24 hours'], ['48h', 'next 2 days'], ['72h', 'next 3 days']].map(([k, label]) => (
           <div key={k} className="rounded-xl py-3" style={{ background: C.bg }}>
@@ -128,6 +144,75 @@ function Pain({ pain }: { pain: any }) {
         </ResponsiveContainer>
       </div>
       <Muted className="mt-1">Dark dots mark days with a seizure.</Muted>
+    </Card>
+  )
+}
+
+function Calendar({ s }: { s: Summary }) {
+  const today = new Date(s.today + 'T12:00:00')
+  const [offset, setOffset] = useState(0)
+  const first = new Date(today.getFullYear(), today.getMonth() - offset, 1)
+  const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()
+  const lead = (first.getDay() + 6) % 7                       // Monday-first grid
+  const key = (d: number) => `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  const earliest = s.first_day ? new Date(s.first_day + 'T12:00:00') : today
+  const canBack = first > new Date(earliest.getFullYear(), earliest.getMonth(), 1)
+  const total = Array.from({ length: days }, (_, i) => s.calendar[key(i + 1)] || 0).reduce((a: number, b: number) => a + b, 0)
+  const btn = 'flex h-9 w-9 items-center justify-center rounded-full disabled:opacity-30'
+  return (
+    <Card title="Calendar" right={
+      <div className="flex items-center gap-1">
+        <button className={btn} style={{ background: C.bg }} disabled={!canBack} onClick={() => setOffset(offset + 1)} aria-label="Previous month"><ChevronLeft className="h-5 w-5" style={{ color: C.ink }} /></button>
+        <button className={btn} style={{ background: C.bg }} disabled={offset === 0} onClick={() => setOffset(offset - 1)} aria-label="Next month"><ChevronRight className="h-5 w-5" style={{ color: C.ink }} /></button>
+      </div>}>
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-[15px] font-semibold" style={{ color: C.ink }}>{first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+        <span className="text-[13px]" style={{ color: C.muted }}>{total} seizure{total === 1 ? '' : 's'}</span>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium" style={{ color: C.muted }}>
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <div key={i}>{d}</div>)}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {Array.from({ length: lead }, (_, i) => <div key={'x' + i} />)}
+        {Array.from({ length: days }, (_, i) => {
+          const k = key(i + 1), c = s.calendar[k] || 0, isToday = k === s.today, future = k > s.today
+          return (
+            <div key={k} className="flex aspect-square flex-col items-center justify-center rounded-lg text-[13px]"
+              style={{ background: c ? (c > 1 ? C.sage : C.sageLight) : C.bg, color: c > 1 ? '#fff' : future ? '#C9C3B8' : C.ink, outline: isToday ? `2px solid ${C.ink}` : 'none', outlineOffset: -2 }}>
+              <span className={c ? 'font-semibold' : ''}>{i + 1}</span>
+              {c > 1 && <span className="text-[9px] leading-none">×{c}</span>}
+            </div>
+          )
+        })}
+      </div>
+      <Muted className="mt-2">Shaded days had a seizure; darker means more than one.</Muted>
+    </Card>
+  )
+}
+
+function Duration({ s }: { s: Summary }) {
+  const data = s.duration_monthly.filter((m: any) => m.median != null).map((m: any) => ({ ...m, minutes: Math.round((m.median / 60) * 100) / 100 }))
+  const t = s.duration_trend
+  return (
+    <Card title="How long they last" right={<span className="text-[13px]" style={{ color: C.muted }}>median per month</span>}>
+      {t && (
+        <div className="mb-2 flex items-baseline gap-4">
+          <div><span className="text-2xl font-bold" style={{ color: C.ink }}>{t.recent}</span><Muted>last 10 seizures</Muted></div>
+          <div><span className="text-2xl font-bold" style={{ color: C.muted }}>{t.prior}</span><Muted>the 30 before</Muted></div>
+        </div>
+      )}
+      <div className="h-36 -ml-3">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid vertical={false} stroke={C.line} />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={28} />
+            <YAxis width={34} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={[0, 'auto']} tickFormatter={(v) => `${v}m`} />
+            <Tooltip formatter={(_v: any, _n: any, item: any) => [`${Math.floor(item.payload.median / 60)}m ${String(item.payload.median % 60).padStart(2, '0')}s (${item.payload.n} seizures)`, 'median']} />
+            <Line dataKey="minutes" stroke={C.sage} strokeWidth={2} dot={{ r: 3, fill: C.sage }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {t?.direction === 'longer' && <Muted className="mt-1">Fewer seizures lately, but longer ones. Worth mentioning to her doctor.</Muted>}
     </Card>
   )
 }
@@ -254,8 +339,10 @@ export default function Dashboard() {
           {!s && !error && [1, 2, 3].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />)}
           {s && (<>
             <Hero s={s} />
-            <Risk p={s.prediction} />
+            <Risk p={s.prediction} after={s.after_seizure} />
             <div className="lg:col-span-2"><Trend s={s} /></div>
+            <Calendar s={s} />
+            <Duration s={s} />
             <Pain pain={s.pain} />
             <Findings items={s.findings} />
             <div className="lg:col-span-2"><Log records={s.records} /></div>
