@@ -6,16 +6,16 @@ const ink = '#1F1B18', muted = '#5F5852', line = '#DDD7CC', sage = '#4A7C59'
 const yesNo = (v: boolean | null) => (v === true ? 'Yes' : v === false ? 'No' : '—')
 
 function MonthlyBars({ months }: { months: any[] }) {
-  const max = Math.max(1, ...months.map((m) => m.count)), W = 640, H = 120, bw = W / months.length
+  const max = Math.max(1, ...months.map((m) => m.count)), W = 640, H = 120, top = 14, bw = W / months.length
   return (
-    <svg viewBox={`0 0 ${W} ${H + 18}`} width="100%" role="img" aria-label="Seizures per month">
+    <svg viewBox={`0 0 ${W} ${H + top + 18}`} width="100%" role="img" aria-label="Seizures per month">
       {months.map((m, i) => {
         const h = (m.count / max) * H
         return (
           <g key={m.month}>
-            <rect x={i * bw + 3} y={H - h} width={bw - 6} height={h} fill={sage} rx={2} />
-            <text x={i * bw + bw / 2} y={H - h - 3} fontSize="10" textAnchor="middle" fill={ink}>{m.count}</text>
-            <text x={i * bw + bw / 2} y={H + 13} fontSize="9" textAnchor="middle" fill={muted}>{m.label}</text>
+            <rect x={i * bw + 3} y={top + H - h} width={bw - 6} height={h} fill={sage} rx={2} />
+            <text x={i * bw + bw / 2} y={top + H - h - 3} fontSize="10" textAnchor="middle" fill={ink}>{m.count}</text>
+            <text x={i * bw + bw / 2} y={top + H + 13} fontSize="9" textAnchor="middle" fill={muted}>{m.label}</text>
           </g>
         )
       })}
