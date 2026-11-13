@@ -48,7 +48,7 @@ function loadWatch() {
   for (const r of rows) {
     const [d, t] = (r['Date/Time'] || '').split(' '); if (!d) continue
     const num = (k: string) => { const v = parseFloat(r[k]); return isFinite(v) ? v : null }
-    const sl = num('Sleep Analysis [Total] (hr)'); if ((t || '').startsWith('00:') && sl && sl > 0) sleep.set(d, sl)   // night ending that morning
+    const sl = num('Sleep Analysis [Total] (hr)'); if ((t || '').startsWith('00:') && sl && sl > 0 && sl <= 13) sleep.set(d, sl)   // night ending that morning; >13h = double-counted sources, skipped
     const h = num('Heart Rate [Min] (count/min)'); if (h) hrs.set(d, [...(hrs.get(d) || []), h])
     const x = num('Walking + Running Distance (mi)'); if (x != null) dist.set(d, (dist.get(d) || 0) + x)
   }
