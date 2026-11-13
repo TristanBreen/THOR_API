@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import { RefreshCw, Download, ChevronDown, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line, CartesianGrid } from 'recharts'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, LineChart, Line, CartesianGrid, ReferenceLine } from 'recharts'
 
 type Summary = any
 const C = { ink: '#2D2926', muted: '#6B655F', line: '#E5E1D8', card: '#FFFDF8', bg: '#F6F2E9', sage: '#4A7C59', sageLight: '#A9C4AE', amber: '#B7791F', rose: '#B4475C' }
@@ -222,6 +222,75 @@ function Duration({ s }: { s: Summary }) {
   )
 }
 
+function Body({ w }: { w: any }) {
+  const [tab, setTab] = useState<'sleep' | 'heart' | 'activity'>('sleep')
+  if (!w?.has_data) return null
+  const hm = (h: number) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, '0')}m`
+  const chance = (c: any) => c && c.p < 0.05
+  const tabs = [['sleep', 'Sleep'], ['heart', 'Resting HR'], ['activity', 'Activity']] as const
+  let chart: React.ReactNode = null, headline = '', sub = '', note = ''
+  if (tab === 'sleep') {
+    const c = w.sleep.compare
+    headline = w.sleep.avg30 ?? '—'; sub = 'average sleep, last 30 nights'
+    note = !c ? 'Not enough nights logged yet to compare.' : chance(c)
+      ? `Nights before a seizure: ${c.seizure_label} vs ${c.other_label} on other nights. Unlikely to be chance (${c.n_seizure} vs ${c.n_other} nights).`
+      : `Nights before a seizure: ${c.seizure_label} vs ${c.other_label}. No clear difference.`
+    chart = (
+      <BarChart data={w.sleep.daily} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+        <CartesianGrid vertical={false} stroke={C.line} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={30} />
+        <YAxis width={28} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={[0, 10]} ticks={[0, 4, 8]} tickFormatter={(v) => `${v}h`} />
+        <Tooltip formatter={(v: any) => [v != null ? hm(v) : '—', 'sleep']} labelFormatter={(l) => `Night before ${l}`} />
+        <ReferenceLine y={7} stroke={C.line} strokeDasharray="4 3" />
+        <Bar dataKey="hours" radius={[3, 3, 0, 0]}>{w.sleep.daily.map((d: any) => <Cell key={d.day} fill={d.before_seizure ? C.rose : C.sageLight} />)}</Bar>
+      </BarChart>)
+  } else if (tab === 'heart') {
+    const c = w.heart.compare, cb = w.heart.compare_day_before
+    headline = w.heart.avg30 != null ? `${w.heart.avg30} bpm` : '—'; sub = 'resting heart rate, last 30 days'
+    note = !c ? 'Not enough days logged yet to compare.' : (chance(c) || chance(cb))
+      ? `Seizure days: ${Math.round(c.seizure)} vs ${Math.round(c.other)} bpm on other days. Unlikely to be chance.`
+      : `Seizure days: ${Math.round(c.seizure)} vs ${Math.round(c.other)} bpm on other days. No clear link so far.`
+    chart = (
+      <LineChart data={w.heart.daily} margin={{ top: 6, right: 6, bottom: 0, left: 0 }}>
+        <CartesianGrid vertical={false} stroke={C.line} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={30} />
+        <YAxis width={28} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={['dataMin - 4', 'dataMax + 4']} allowDecimals={false} />
+        <Tooltip formatter={(v: any) => [v != null ? `${v} bpm` : '—', 'resting HR']} />
+        <Line dataKey="bpm" stroke={C.sage} strokeWidth={2} connectNulls
+          dot={(pr: any) => pr.payload.seizure && pr.payload.bpm != null ? <circle key={pr.index} cx={pr.cx} cy={pr.cy} r={4} fill={C.rose} /> : <g key={pr.index} />} />
+      </LineChart>)
+  } else {
+    const c = w.activity.compare, cb = w.activity.compare_day_before
+    headline = w.activity.avg30 != null ? `${w.activity.avg30} mi` : '—'; sub = 'walking per day, last 30 days'
+    note = !c ? 'Not enough days logged yet to compare.' : chance(c) && !chance(cb)
+      ? `Seizure days: ${c.seizure.toFixed(1)} vs ${c.other.toFixed(1)} mi, but no difference the day before, so it's likely an effect (resting), not a warning sign.`
+      : chance(cb) ? `The day before a seizure: ${cb.seizure.toFixed(1)} vs ${cb.other.toFixed(1)} mi. Unlikely to be chance.`
+      : `Seizure days: ${c.seizure.toFixed(1)} vs ${c.other.toFixed(1)} mi. No clear link.`
+    chart = (
+      <BarChart data={w.activity.daily} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+        <CartesianGrid vertical={false} stroke={C.line} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={30} />
+        <YAxis width={28} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} allowDecimals={false} />
+        <Tooltip formatter={(v: any) => [v != null ? `${v} mi` : '—', 'walking']} />
+        <Bar dataKey="miles" radius={[3, 3, 0, 0]}>{w.activity.daily.map((d: any) => <Cell key={d.day} fill={d.seizure ? C.rose : C.sageLight} />)}</Bar>
+      </BarChart>)
+  }
+  return (
+    <Card title="Sleep & body" right={
+      <div className="flex rounded-lg p-0.5" style={{ background: C.bg }}>
+        {tabs.map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} className="rounded-md px-2.5 py-1 text-[12px] font-semibold"
+            style={tab === k ? { background: C.card, color: C.ink, boxShadow: '0 1px 2px rgba(0,0,0,.08)' } : { color: C.muted }}>{l}</button>
+        ))}
+      </div>}>
+      <div className="mb-2"><span className="text-2xl font-bold" style={{ color: C.ink }}>{headline}</span><Muted>{sub}</Muted></div>
+      <div className="h-36 -ml-3"><ResponsiveContainer width="100%" height="100%">{chart as any}</ResponsiveContainer></div>
+      <Muted className="mt-2">{note}</Muted>
+      <Muted className="mt-1">{tab === 'sleep' ? 'Pink bars: nights before a seizure. Dashed line: 7 hours.' : 'Pink: days with a seizure.'} From her Apple Watch, last 60 days.</Muted>
+    </Card>
+  )
+}
+
 function Findings({ items }: { items: any[] }) {
   return (
     <Card title="What the data shows">
@@ -348,6 +417,7 @@ export default function Dashboard() {
             <div className="lg:col-span-2"><Trend s={s} /></div>
             <Calendar s={s} />
             <Duration s={s} />
+            <Body w={s.watch} />
             <Pain pain={s.pain} />
             <Findings items={s.findings} />
             <div className="lg:col-span-2"><Log records={s.records} /></div>

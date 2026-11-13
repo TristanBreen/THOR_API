@@ -30,6 +30,33 @@ const quant = (a: number[], q: number) => { const b = [...a].sort((x, y) => x - 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const pct = (a: number, b: number) => b ? Math.round((a / b) * 100) : 0
 
+
+// ---------- Apple Watch (sleep, resting heart rate, activity) ----------
+function seededRandom(seed: number) { let x = seed >>> 0; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296) }
+function permutationP(a: number[], b: number[], iters = 2000) {          // two-sided: how often chance gives a gap this big
+  const all = [...a, ...b], k = a.length, rnd = seededRandom(7), m = (v: number[]) => v.reduce((x, y) => x + y, 0) / v.length
+  const obs = Math.abs(m(a) - m(b)); let hits = 0
+  for (let i = 0; i < iters; i++) {
+    const s = all.slice(); for (let j = s.length - 1; j > 0; j--) { const r = Math.floor(rnd() * (j + 1)); [s[j], s[r]] = [s[r], s[j]] }
+    if (Math.abs(m(s.slice(0, k)) - m(s.slice(k))) >= obs) hits++
+  }
+  return hits / iters
+}
+function loadWatch() {
+  const rows = readCsv('appleWatchData.csv')
+  const sleep = new Map<string, number>(), hrs = new Map<string, number[]>(), dist = new Map<string, number>()
+  for (const r of rows) {
+    const [d, t] = (r['Date/Time'] || '').split(' '); if (!d) continue
+    const num = (k: string) => { const v = parseFloat(r[k]); return isFinite(v) ? v : null }
+    const sl = num('Sleep Analysis [Total] (hr)'); if ((t || '').startsWith('00:') && sl && sl > 0) sleep.set(d, sl)   // night ending that morning
+    const h = num('Heart Rate [Min] (count/min)'); if (h) hrs.set(d, [...(hrs.get(d) || []), h])
+    const x = num('Walking + Running Distance (mi)'); if (x != null) dist.set(d, (dist.get(d) || 0) + x)
+  }
+  const rest = new Map<string, number>()
+  hrs.forEach((v, d) => { if (v.length >= 16) { const s = [...v].sort((a, b) => a - b); rest.set(d, s[Math.floor(s.length / 10)]) } })
+  return { sleep, rest, dist }
+}
+
 export function loadSeizures(): Seizure[] {
   return readCsv('seizures.csv').map((r) => {
     const t = localDate(r['Date'] || '', r['Time'] || '')
@@ -134,6 +161,39 @@ export function buildSummary() {
   const lastPain = P[P.length - 1]
   if (sd.length >= 5 && od.length >= 5) findings.push({ title: 'Pain and seizures', text: `Pain averaged ${mean(sd).toFixed(1)} on days with a seizure vs ${mean(od).toFixed(1)} on other days (${sd.length} vs ${od.length} days with pain logged). That's a link, not proof of a cause.` })
 
+
+  // --- Apple Watch trends + honest comparisons (shown as findings only when unlikely to be chance)
+  const watch = loadWatch()
+  const shiftDay = (k: string, n: number) => { const d = new Date(k + 'T12:00:00'); d.setDate(d.getDate() + n); return ymd(d) }
+  const firstDay = n ? ymd(S[0].t) : ''
+  const compare = (series: Map<string, number>, shift: number) => {
+    const a: number[] = [], b: number[] = []
+    series.forEach((v, d) => { if (d < firstDay) return; (seizureDays.has(shiftDay(d, shift)) ? a : b).push(v) })
+    if (a.length < 15 || b.length < 15) return null
+    return { seizure: Math.round(mean(a) * 100) / 100, other: Math.round(mean(b) * 100) / 100, n_seizure: a.length, n_other: b.length, p: permutationP(a, b) }
+  }
+  const hm = (h: number) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, '0')}m`
+  const sleepCmp = compare(watch.sleep, 0)          // sleep stamped on day d = the night before day d
+  const restCmp = compare(watch.rest, 0), restPrev = compare(watch.rest, 1)
+  const distCmp = compare(watch.dist, 0), distPrev = compare(watch.dist, 1)
+  if (sleepCmp && sleepCmp.p < 0.05) findings.push({ title: sleepCmp.seizure < sleepCmp.other ? 'Less sleep before seizures' : 'More sleep before seizures',
+    text: `She slept ${hm(sleepCmp.seizure)} on average the night before a seizure vs ${hm(sleepCmp.other)} on other nights (${sleepCmp.n_seizure} vs ${sleepCmp.n_other} nights, Apple Watch). That gap is unlikely to be chance, but it's a link, not proof of a cause.` })
+  if (distCmp && distPrev && distCmp.p < 0.05 && distPrev.p >= 0.05) findings.push({ title: 'Less walking on seizure days',
+    text: `${distCmp.seizure.toFixed(1)} mi on seizure days vs ${distCmp.other.toFixed(1)} mi otherwise, but no difference the day before, so it's likely an effect of the seizure (resting), not a warning sign.` })
+  const days60: string[] = []; for (let i = 59; i >= 0; i--) days60.push(ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)))
+  const lab = (k: string) => fmt(new Date(k + 'T12:00:00'), { month: 'short', day: 'numeric' })
+  const watchOut = {
+    has_data: watch.sleep.size + watch.rest.size > 0,
+    sleep: { daily: days60.map((d) => ({ day: d, label: lab(d), hours: watch.sleep.has(d) ? Math.round(watch.sleep.get(d)! * 10) / 10 : null, before_seizure: seizureDays.has(d) })),
+             avg30: (() => { const v = days60.slice(-30).map((d) => watch.sleep.get(d)).filter((x): x is number => x != null); return v.length ? hm(mean(v)) : null })(),
+             compare: sleepCmp ? { ...sleepCmp, seizure_label: hm(sleepCmp.seizure), other_label: hm(sleepCmp.other) } : null },
+    heart: { daily: days60.map((d) => ({ day: d, label: lab(d), bpm: watch.rest.get(d) ?? null, seizure: seizureDays.has(d) })),
+             avg30: (() => { const v = days60.slice(-30).map((d) => watch.rest.get(d)).filter((x): x is number => x != null); return v.length ? Math.round(mean(v)) : null })(),
+             compare: restCmp, compare_day_before: restPrev },
+    activity: { daily: days60.map((d) => ({ day: d, label: lab(d), miles: watch.dist.has(d) ? Math.round(watch.dist.get(d)! * 100) / 100 : null, seizure: seizureDays.has(d) })),
+                avg30: (() => { const v = days60.slice(-30).map((d) => watch.dist.get(d)).filter((x): x is number => x != null); return v.length ? Math.round(mean(v) * 10) / 10 : null })(),
+                compare: distCmp, compare_day_before: distPrev },
+  }
   // --- details charts
   const hours = Array.from({ length: 24 }, (_, h) => ({ hour: h, label: fmt(new Date(2000, 0, 1, h), { hour: 'numeric' }), count: S.filter((s) => s.t.getHours() === h).length }))
   const dbins: [string, number, number][] = [['<30s', 0, 30], ['30–60s', 30, 60], ['1–1½m', 60, 90], ['1½–2m', 90, 120], ['2–3m', 120, 180], ['3m+', 180, 1e9]]
@@ -169,5 +229,6 @@ export function buildSummary() {
       gaps: gbins.map(([label, a, b]) => ({ label, count: gaps.filter((g) => g >= a && g < b).length })),
     },
     records,
+    watch: watchOut,
   }
 }
