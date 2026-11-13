@@ -239,7 +239,7 @@ function Body({ w }: { w: any }) {
       <BarChart data={w.sleep.daily} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke={C.line} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={30} />
-        <YAxis width={28} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={[0, 10]} ticks={[0, 4, 8]} tickFormatter={(v) => `${v}h`} />
+        <YAxis width={28} tick={{ fontSize: 11, fill: C.muted }} tickLine={false} axisLine={false} domain={[0, (max: number) => Math.max(10, Math.ceil(max))]} allowDecimals={false} tickFormatter={(v) => `${v}h`} />
         <Tooltip formatter={(v: any) => [v != null ? hm(v) : '—', 'sleep']} labelFormatter={(l) => `Night before ${l}`} />
         <ReferenceLine y={7} stroke={C.line} strokeDasharray="4 3" />
         <Bar dataKey="hours" radius={[3, 3, 0, 0]}>{w.sleep.daily.map((d: any) => <Cell key={d.day} fill={d.before_seizure ? C.rose : C.sageLight} />)}</Bar>
